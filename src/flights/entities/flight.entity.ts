@@ -8,7 +8,7 @@ import {
 import { Airplane } from '../../airplanes/entities/airplane.entity';
 import { Passenger } from '../../passengers/entities/passenger.entity';
 import { FlightStatus } from '../types/flight.status';
-import { FlightCode } from '../valueObjects/FlightCode';
+import { FlightCode } from '../valueObjects/flight.code';
 
 @Entity()
 export class Flight {
@@ -19,10 +19,10 @@ export class Flight {
   code: FlightCode;
 
   @Column()
-  from: string;
+  origin: string;
 
   @Column()
-  to: string;
+  destination: string;
 
   @ManyToOne(() => Airplane)
   airplane: Airplane;
@@ -51,8 +51,13 @@ export class Flight {
     this.arrival = arrival;
   }
 
+  validate() {
+    this.validateRoute();
+    this.validateSchedule();
+  }
+
   validateRoute() {
-    if (this.from === this.to) {
+    if (this.origin === this.destination) {
       throw new Error('Origin and destination must be different');
     }
   }

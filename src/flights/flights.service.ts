@@ -5,7 +5,7 @@ import { Flight } from './entities/flight.entity';
 import { CreateFlightDto } from './dto/create.flight.dto';
 import { AirplanesService } from '../airplanes/airplanes.service';
 import { FlightStatus } from './types/flight.status';
-import { FlightCode } from './valueObjects/FlightCode';
+import { FlightCode } from './valueObjects/flight.code';
 import { UpdateFlightDto } from './dto/update.flight.dto';
 
 @Injectable()
@@ -55,8 +55,8 @@ export class FlightsService {
     const flight = this.flightRepository.create({
       id: flightDto.id,
       code: currentCode,
-      from: flightDto.from,
-      to: flightDto.to,
+      origin: flightDto.origin,
+      destination: flightDto.destination,
       airplane: airplaneSearch[0],
       departure: flightDto.departure,
       arrival: flightDto.arrival,
@@ -64,6 +64,7 @@ export class FlightsService {
       status: FlightStatus.Scheduled,
     });
 
+    flight.validate();
     return await this.flightRepository.save(flight);
   }
 
@@ -78,9 +79,10 @@ export class FlightsService {
     const flight = flightSearch[0];
 
     flight.setStatus(flightDto.status as FlightStatus);
-    flight.setDeparture(new Date(flightDto.departure));
-    flight.setArrival(new Date(flightDto.arrival));
+    flight.setDeparture(flightDto.departure);
+    flight.setArrival(flightDto.arrival);
 
+    flight.validate();
     return await this.flightRepository.save(flight);
   }
 }

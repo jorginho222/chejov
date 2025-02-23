@@ -45,11 +45,11 @@ describe('FlightsController', () => {
     const flightDto: CreateFlightDto = {
       id: uuidV4(),
       airline: { name: 'Air Canada', code: 'AC' },
-      from: 'New York',
-      to: 'London',
+      origin: 'New York',
+      destination: 'London',
       airplane: airplaneDto,
-      departure: currentDate.toISOString(),
-      arrival: twoHoursLater.toISOString(),
+      departure: currentDate,
+      arrival: twoHoursLater,
     };
 
     await request(app.getHttpServer())
@@ -64,8 +64,8 @@ describe('FlightsController', () => {
 
     expect(response.body).toEqual({
       id: flightDto.id,
-      from: flightDto.from,
-      to: flightDto.to,
+      origin: flightDto.origin,
+      destination: flightDto.destination,
       airplane: flightDto.airplane,
       departure: flightDto.departure,
       arrival: flightDto.arrival,
