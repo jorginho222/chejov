@@ -1,45 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Equal, FindManyOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Flight } from './entities/flight.entity';
 import { CreateFlightDto } from './dto/create.flight.dto';
 import { AirplanesService } from '../airplanes/airplanes.service';
 import { FlightStatus } from './types/flight.status';
 import { FlightCode } from './valueObjects/flight.code';
-import { UpdateFlightDto } from './dto/update.flight.dto';
+import { UpdateFlightScheduleDto } from './dto/update.flight.schedule.dto';
+import { FlightsSearchService } from './flights.search.service';
+import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
 
 @Injectable()
-export class FlightsService {
+export class FlightsUpsertService {
   constructor(
     @InjectRepository(Flight)
     private readonly flightRepository: Repository<Flight>,
+    private readonly flightSearchService: FlightsSearchService,
     private readonly airplaneService: AirplanesService,
   ) {}
 
-  async search(criteria: FindManyOptions<Flight>) {
-    return await this.flightRepository.find(criteria);
-  }
-
-  async getLastCodeCorrelative(prefixSearch: string): Promise<number | null> {
-    const searchLastCriteria: FindManyOptions<Flight> = {
-      where: {
-        code: Equal({ prefix: prefixSearch }),
-      },
-      order: {
-        code: 'DESC',
-      },
-      take: 1,
-    };
-    const lastFlightSearch: Flight[] = await this.search(searchLastCriteria);
-    if (lastFlightSearch.length === 0) return null;
-
-    return lastFlightSearch[0].code.getCorrelative();
-  }
-
   async create(flightDto: CreateFlightDto) {
-    const lastCorrelative = await this.getLastCodeCorrelative(
-      flightDto.airline.code,
-    );
+    const lastCorrelative =
+      await this.flightSearchService.getLastCodeCorrelative(
+        flightDto.airline.code,
+      );
     const currentCode = new FlightCode(
       flightDto.airline.code,
       lastCorrelative ? lastCorrelative + 1 : 1,
@@ -62,14 +46,32 @@ export class FlightsService {
       arrival: flightDto.arrival,
       passengers: [],
       status: FlightStatus.Scheduled,
+      flightPrices: flightDto.flightPrices,
     });
 
     flight.validate();
+    flight.setSeats();
+
     return await this.flightRepository.save(flight);
   }
 
-  async update(flightDto: UpdateFlightDto) {
-    const flightSearch = await this.search({
+  async updateSchedule(flightDto: UpdateFlightScheduleDto) {
+    const flightSearch = await this.flightSearchService.search({
+      where: {
+        id: flightDto.id,
+      },
+    });
+
+    if (flightSearch.length === 0) throw new Error('Flight not found');
+    const flight = flightSearch[0];
+
+    flight.setSchedule(flightDto.departure, flightDto.arrival);
+
+    return await this.flightRepository.save(flight);
+  }
+
+  async updateStatus(flightDto: UpdateFlightStatusDto) {
+    const flightSearch = await this.flightSearchService.search({
       where: {
         id: flightDto.id,
       },
@@ -79,10 +81,7 @@ export class FlightsService {
     const flight = flightSearch[0];
 
     flight.setStatus(flightDto.status as FlightStatus);
-    flight.setDeparture(flightDto.departure);
-    flight.setArrival(flightDto.arrival);
 
-    flight.validate();
     return await this.flightRepository.save(flight);
   }
 }

@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { AirplanesService } from './airplanes.service';
-import { AirplaneDto } from './dto/airplane.dto';
+import { CreateAirplaneDto } from './dto/create.airplane.dto';
 
 @Controller('airplanes')
 export class AirplanesController {
@@ -8,7 +8,7 @@ export class AirplanesController {
 
   @Post()
   @HttpCode(201)
-  async upsert(@Body() airplaneDto: AirplaneDto) {
+  async upsert(@Body() airplaneDto: CreateAirplaneDto) {
     return await this.airplanesService.upsert(airplaneDto);
   }
 }

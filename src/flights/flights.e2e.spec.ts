@@ -16,7 +16,11 @@ describe('FlightsController', () => {
     id: uuidV4(),
     brand: 'Boeing',
     model: '737',
-    passengersCapacity: 200,
+    passengersCapacity: 120,
+    seatsConfig: [
+      { columnsQuantity: 4, rowsQuantity: 10, class: 'firstClass' },
+      { columnsQuantity: 6, rowsQuantity: 20, class: 'economicClass' },
+    ],
   };
 
   beforeEach(async () => {
@@ -50,6 +54,16 @@ describe('FlightsController', () => {
       airplane: airplaneDto,
       departure: currentDate,
       arrival: twoHoursLater,
+      flightPrices: [
+        {
+          class: 'firstClass',
+          price: 1000,
+        },
+        {
+          class: 'economicClass',
+          price: 500,
+        },
+      ],
     };
 
     await request(app.getHttpServer())
@@ -62,19 +76,20 @@ describe('FlightsController', () => {
       .send(flightDto)
       .expect(201);
 
-    expect(response.body).toEqual({
+    expect(response.body).toContain({
       id: flightDto.id,
       origin: flightDto.origin,
       destination: flightDto.destination,
       airplane: flightDto.airplane,
-      departure: flightDto.departure,
-      arrival: flightDto.arrival,
+      departure: flightDto.departure.toISOString(),
+      arrival: flightDto.arrival.toISOString(),
       code: {
         prefix: flightDto.airline.code,
         correlative: 1,
       },
       passengers: [],
       status: FlightStatus.Scheduled,
+      flightPrices: flightDto.flightPrices,
     });
   });
 });

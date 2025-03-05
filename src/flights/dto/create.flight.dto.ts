@@ -1,6 +1,8 @@
-import { AirplaneDto } from '../../airplanes/dto/airplane.dto';
+import { CreateAirplaneDto } from '../../airplanes/dto/create.airplane.dto';
 import { AirlineDto } from './airline.dto';
-import { IsDate, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsDate, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import { FlightPrices } from '../valueObjects/flight.prices';
 
 export class CreateFlightDto {
   @IsUUID('4')
@@ -9,12 +11,14 @@ export class CreateFlightDto {
   airline: AirlineDto;
 
   @IsDate()
+  @Type(() => Date)
   departure: Date;
 
   @IsDate()
+  @Type(() => Date)
   arrival: Date;
 
-  airplane: AirplaneDto;
+  airplane: CreateAirplaneDto;
 
   @IsString()
   @IsNotEmpty()
@@ -23,4 +27,8 @@ export class CreateFlightDto {
   @IsString()
   @IsNotEmpty()
   destination: string;
+
+  @IsArray()
+  @IsNotEmpty()
+  flightPrices: Array<FlightPrices>;
 }

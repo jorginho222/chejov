@@ -1,27 +1,55 @@
-import { Body, Controller, Get, HttpCode, Post, Put } from '@nestjs/common';
-import { FlightsService } from './flights.service';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Patch,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { FlightsUpsertService } from './flights.upsert.service';
 import { Flight } from './entities/flight.entity';
 import { CreateFlightDto } from './dto/create.flight.dto';
-import { UpdateFlightDto } from './dto/update.flight.dto';
+import { UpdateFlightScheduleDto } from './dto/update.flight.schedule.dto';
+import { FlightsSearchService } from './flights.search.service';
+import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
+import { AirplaneSeat } from './valueObjects/airplane.seat';
+import { FlightsReserveService } from './flights.reserve.service';
 
 @Controller('flights')
 export class FlightsController {
-  constructor(private readonly flightsService: FlightsService) {}
+  constructor(
+    private readonly flightsUpsertService: FlightsUpsertService,
+    private readonly flightsSearchService: FlightsSearchService,
+    private readonly flightsReserveService: FlightsReserveService,
+  ) {}
 
   @Get()
   async findAll(): Promise<Flight[]> {
-    return await this.flightsService.search({});
+    return await this.flightsSearchService.search({});
   }
 
   @Post()
   @HttpCode(201)
   async create(@Body() flightDto: CreateFlightDto) {
-    return await this.flightsService.create(flightDto);
+    return await this.flightsUpsertService.create(flightDto);
   }
 
   @Put()
   @HttpCode(200)
-  async update(@Body() flightDto: UpdateFlightDto) {
-    return await this.flightsService.update(flightDto);
+  async reserveFlightSeat(@Body() seat: AirplaneSeat, flightId: string) {
+    return await this.flightsReserveService.reserveSeat(seat, flightId);
+  }
+
+  @Patch('flights/schedule')
+  @HttpCode(200)
+  async updateSchedule(@Body() flightDto: UpdateFlightScheduleDto) {
+    return await this.flightsUpsertService.updateSchedule(flightDto);
+  }
+
+  @Patch('flights/status')
+  @HttpCode(200)
+  async updateStatus(@Body() flightDto: UpdateFlightStatusDto) {
+    return await this.flightsUpsertService.updateStatus(flightDto);
   }
 }

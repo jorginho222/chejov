@@ -1,6 +1,7 @@
 import { IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
+import { AirplaneSeatConfig } from '../valueObjects/airplane.seat.config';
 
-export class AirplaneDto {
+export class CreateAirplaneDto {
   @IsUUID('4')
   id: string;
 
@@ -14,4 +15,7 @@ export class AirplaneDto {
 
   @IsNumber()
   passengersCapacity: number;
+
+  @IsNotEmpty()
+  seatsConfig: Array<AirplaneSeatConfig>;
 }

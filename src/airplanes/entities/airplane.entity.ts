@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { AirplaneSeatConfig } from '../valueObjects/airplane.seat.config';
 
 @Entity()
 export class Airplane {
@@ -13,4 +14,7 @@ export class Airplane {
 
   @Column()
   passengersCapacity: number;
+
+  @Column('json')
+  seatsConfig: Array<AirplaneSeatConfig>;
 }
