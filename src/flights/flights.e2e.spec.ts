@@ -8,6 +8,8 @@ import { FlightStatus } from './types/flight.status';
 import { FlightsModule } from './flights.module';
 import { AirplanesModule } from '../airplanes/airplanes.module';
 import ormConfigTest from '../../ormConfigTest';
+import { AirplaneSeat } from './valueObjects/airplane.seat';
+import { PassengerDto } from '../passengers/dto/passenger.dto';
 
 describe('FlightsController', () => {
   let app: INestApplication;
@@ -20,6 +22,34 @@ describe('FlightsController', () => {
     seatsConfig: [
       { columnsQuantity: 4, rowsQuantity: 10, class: 'firstClass' },
       { columnsQuantity: 6, rowsQuantity: 20, class: 'economicClass' },
+    ],
+  };
+  const passengerDto: PassengerDto = {
+    id: uuidV4(),
+    documentNumber: '123456789',
+    name: 'Ramon',
+    lastName: 'Diaz',
+  };
+
+  const currentDate = new Date();
+  const twoHoursLater = new Date(currentDate.getTime() + 2 * 60 * 60 * 1000);
+  const flightDto: CreateFlightDto = {
+    id: uuidV4(),
+    airline: { name: 'Air Canada', code: 'AC' },
+    origin: 'New York',
+    destination: 'London',
+    airplane: airplaneDto,
+    departure: currentDate,
+    arrival: twoHoursLater,
+    flightPrices: [
+      {
+        class: 'firstClass',
+        price: 1000,
+      },
+      {
+        class: 'economicClass',
+        price: 500,
+      },
     ],
   };
 
@@ -44,28 +74,6 @@ describe('FlightsController', () => {
   afterEach(async () => {});
 
   it('POST /flights - should create a flight', async () => {
-    const currentDate = new Date();
-    const twoHoursLater = new Date(currentDate.getTime() + 2 * 60 * 60 * 1000);
-    const flightDto: CreateFlightDto = {
-      id: uuidV4(),
-      airline: { name: 'Air Canada', code: 'AC' },
-      origin: 'New York',
-      destination: 'London',
-      airplane: airplaneDto,
-      departure: currentDate,
-      arrival: twoHoursLater,
-      flightPrices: [
-        {
-          class: 'firstClass',
-          price: 1000,
-        },
-        {
-          class: 'economicClass',
-          price: 500,
-        },
-      ],
-    };
-
     await request(app.getHttpServer())
       .post('/airplanes')
       .send(airplaneDto)
@@ -91,5 +99,23 @@ describe('FlightsController', () => {
       status: FlightStatus.Scheduled,
       flightPrices: flightDto.flightPrices,
     });
+  });
+
+  it('should reserve a flight seat', async () => {
+    await request(app.getHttpServer()).post('/passengers').send(passengerDto);
+    await request(app.getHttpServer()).post('/airplanes').send(airplaneDto);
+    await request(app.getHttpServer()).post('/flights').send(flightDto);
+
+    const seat: AirplaneSeat = {
+      class: 'firstClass',
+      column: 'A',
+      row: 1,
+      passengerId: passengerDto.id,
+    };
+
+    await request(app.getHttpServer())
+      .put(`/flights/${flightDto.id}/reserve`)
+      .send(seat)
+      .expect(201);
   });
 });

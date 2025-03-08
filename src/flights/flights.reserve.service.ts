@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Flight } from './entities/flight.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Passenger } from '../passengers/entities/passenger.entity';
 import { AirplaneSeat } from './valueObjects/airplane.seat';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FlightReservedEvent } from './events/flight.reserved.event';
 
 @Injectable()
 export class FlightsReserveService {
@@ -12,6 +14,8 @@ export class FlightsReserveService {
     private flightRepository: Repository<Flight>,
     @InjectRepository(Passenger)
     private passengerRepository: Repository<Passenger>,
+    private dataSource: DataSource,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async reserveSeat(seat: AirplaneSeat, flightId: string) {
@@ -19,19 +23,37 @@ export class FlightsReserveService {
       throw new Error('Need a passenger to reserve a seat');
     }
 
-    const passengerSearch = await this.passengerRepository.find({
-      where: { id: seat.passengerId },
-    });
-    const flightSearch = await this.flightRepository.find({
-      where: { id: flightId },
-    });
-    const flight = flightSearch[0];
-    const passenger = passengerSearch[0];
+    const queryRunner = this.dataSource.createQueryRunner();
 
-    flight.reserveSeat(seat, passengerSearch[0]);
-    await this.flightRepository.save(flight);
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    passenger.flights.push(flight);
-    await this.passengerRepository.save(passenger);
+    try {
+      const flightSearch = await this.flightRepository.find({
+        where: { id: flightId },
+        relations: ['passengers'],
+      });
+      const flight = flightSearch[0];
+      const passengerSearch = await this.passengerRepository.find({
+        where: { id: seat.passengerId },
+        relations: ['flights'],
+      });
+      const passenger = passengerSearch[0];
+
+      flight.reserveSeat(seat, passenger);
+      passenger.flights.push(flight);
+
+      await this.flightRepository.save(flight);
+      await this.passengerRepository.save(passenger);
+
+      this.eventEmitter.emit(
+        'flight.reserved',
+        new FlightReservedEvent(flightId, seat),
+      );
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

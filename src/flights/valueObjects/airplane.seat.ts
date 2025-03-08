@@ -3,4 +3,8 @@ export class AirplaneSeat {
   column: string;
   row: number;
   passengerId: null | string;
+
+  toString(): string {
+    return `${this.column} ${this.row}`;
+  }
 }

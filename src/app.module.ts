@@ -7,11 +7,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassengersModule } from './passengers/passengers.module';
 import ormConfig from '../ormConfig';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { MailerModule } from '@nestjs-modules/mailer';
+import mailerConfig from '../mailer.config';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(ormConfig),
     EventEmitterModule.forRoot(),
+    MailerModule.forRoot(mailerConfig),
     FlightsModule,
     AirplanesModule,
     PassengersModule,

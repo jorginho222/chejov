@@ -20,14 +20,11 @@ export class FlightsUpsertService {
   ) {}
 
   async create(flightDto: CreateFlightDto) {
-    const lastCorrelative =
-      await this.flightSearchService.getLastCodeCorrelative(
-        flightDto.airline.code,
-      );
-    const currentCode = new FlightCode(
-      flightDto.airline.code,
-      lastCorrelative ? lastCorrelative + 1 : 1,
-    );
+    // const lastCorrelative =
+    //   await this.flightSearchService.getLastCodeCorrelative(
+    //     flightDto.airline.code,
+    //   );
+    const currentCode = new FlightCode(flightDto.airline.code, 1);
 
     const airplaneSearch = await this.airplaneService.search({
       where: {

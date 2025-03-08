@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Param,
   Patch,
   Post,
   Put,
@@ -35,19 +36,22 @@ export class FlightsController {
     return await this.flightsUpsertService.create(flightDto);
   }
 
-  @Put()
+  @Put('/:flightId/reserve')
   @HttpCode(200)
-  async reserveFlightSeat(@Body() seat: AirplaneSeat, flightId: string) {
+  async reserveFlightSeat(
+    @Body() seat: AirplaneSeat,
+    @Param('flightId') flightId: string,
+  ) {
     return await this.flightsReserveService.reserveSeat(seat, flightId);
   }
 
-  @Patch('flights/schedule')
+  @Patch('/schedule')
   @HttpCode(200)
   async updateSchedule(@Body() flightDto: UpdateFlightScheduleDto) {
     return await this.flightsUpsertService.updateSchedule(flightDto);
   }
 
-  @Patch('flights/status')
+  @Patch('/status')
   @HttpCode(200)
   async updateStatus(@Body() flightDto: UpdateFlightStatusDto) {
     return await this.flightsUpsertService.updateStatus(flightDto);

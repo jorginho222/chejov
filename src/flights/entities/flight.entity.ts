@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  JoinTable,
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -36,6 +37,11 @@ export class Flight {
   arrival: Date;
 
   @ManyToMany(() => Passenger, (passenger) => passenger.flights)
+  @JoinTable({
+    name: 'flight_passengers',
+    joinColumns: [{ name: 'flight_id' }],
+    inverseJoinColumns: [{ name: 'passenger_id' }],
+  })
   passengers: Array<Passenger>;
 
   @Column()
