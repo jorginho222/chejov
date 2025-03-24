@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID, Length } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsUUID, Length } from 'class-validator';
 
 export class PassengerDto {
   @IsUUID('4')
@@ -16,4 +16,7 @@ export class PassengerDto {
   @IsString()
   @IsNotEmpty()
   lastName: string;
+
+  @IsEmail()
+  email: string;
 }

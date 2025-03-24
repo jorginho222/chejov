@@ -12,6 +12,7 @@ import { FlightStatus } from '../types/flight.status';
 import { FlightCode } from '../valueObjects/flight.code';
 import { AirplaneSeat } from '../valueObjects/airplane.seat';
 import { FlightPrices } from '../valueObjects/flight.prices';
+import { BadRequestException } from '@nestjs/common';
 
 @Entity()
 export class Flight {
@@ -126,10 +127,10 @@ export class Flight {
     );
 
     if (seatSearchResult === -1) {
-      throw new Error('Seat not found');
+      throw new BadRequestException('Seat not found');
     }
     if (null !== this.seats[seatSearchResult].passengerId) {
-      throw new Error('Seat already reserved');
+      throw new BadRequestException('Seat already reserved');
     }
 
     this.seats[seatSearchResult].passengerId = seat.passengerId;
@@ -137,6 +138,22 @@ export class Flight {
     this.checkFlightAvailability();
 
     this.passengers.push(passenger);
+  }
+
+  cancelSeatReservation(seat: AirplaneSeat) {
+    const seatSearch = this.seats.find(
+      (flightSeat) =>
+        flightSeat.row === seat.row && flightSeat.column === seat.column,
+    );
+    if (!seatSearch) {
+      throw new BadRequestException('Seat not found');
+    }
+    if (seatSearch.passengerId !== seat.passengerId) {
+      throw new BadRequestException('Seat not reserved by passenger');
+    }
+
+    seatSearch.passengerId = null;
+    this.isFullyReserved = false;
   }
 
   private checkFlightAvailability() {

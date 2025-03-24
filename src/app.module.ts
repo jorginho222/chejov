@@ -6,7 +6,7 @@ import { AirplanesModule } from './airplanes/airplanes.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassengersModule } from './passengers/passengers.module';
 import ormConfig from '../ormConfig';
-import { EventEmitterModule } from '@nestjs/event-emitter';
+import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import { MailerModule } from '@nestjs-modules/mailer';
 import mailerConfig from '../mailer.config';
 
@@ -20,6 +20,6 @@ import mailerConfig from '../mailer.config';
     PassengersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, EventEmitter2],
 })
 export class AppModule {}

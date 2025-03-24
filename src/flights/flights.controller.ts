@@ -45,6 +45,18 @@ export class FlightsController {
     return await this.flightsReserveService.reserveSeat(seat, flightId);
   }
 
+  @Put('/:flightId/cancel')
+  @HttpCode(200)
+  async cancelFlightSeat(
+    @Body() seat: AirplaneSeat,
+    @Param('flightId') flightId: string,
+  ) {
+    return await this.flightsReserveService.cancelSeatReservation(
+      seat,
+      flightId,
+    );
+  }
+
   @Patch('/schedule')
   @HttpCode(200)
   async updateSchedule(@Body() flightDto: UpdateFlightScheduleDto) {

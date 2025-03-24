@@ -2,7 +2,7 @@ import { MailerOptions } from '@nestjs-modules/mailer';
 
 const mailerConfig: MailerOptions = {
   transport: {
-    host: 'localhost',
+    host: 'smtp.ethereal.email',
     port: 507,
     secure: false,
   },

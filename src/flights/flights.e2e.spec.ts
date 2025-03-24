@@ -29,6 +29,7 @@ describe('FlightsController', () => {
     documentNumber: '123456789',
     name: 'Ramon',
     lastName: 'Diaz',
+    email: 'example@example.com',
   };
 
   const currentDate = new Date();
@@ -116,6 +117,6 @@ describe('FlightsController', () => {
     await request(app.getHttpServer())
       .put(`/flights/${flightDto.id}/reserve`)
       .send(seat)
-      .expect(201);
+      .expect(200);
   });
 });

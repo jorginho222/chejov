@@ -26,6 +26,7 @@ describe('PassengersController', () => {
       documentNumber: '123456789',
       name: 'Ramon',
       lastName: 'Diaz',
+      email: 'ramon@example.com',
     };
 
     await request(app.getHttpServer())
