@@ -17,4 +17,7 @@ export class Airplane {
 
   @Column('json')
   seatsConfig: Array<AirplaneSeatConfig>;
+
+  @Column({ nullable: true })
+  imageUrl: string;
 }
