@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  DeleteObjectCommand,
+  DeleteObjectCommandInput,
   PutObjectCommand,
   PutObjectCommandInput,
   PutObjectCommandOutput,
@@ -11,10 +13,12 @@ import { ConfigService } from '@nestjs/config';
 export class S3Service {
   private s3: S3Client;
   private readonly region: string | undefined;
+  private readonly bucketName: string | undefined;
   private logger: Logger = new Logger(S3Service.name);
 
   constructor(private readonly configService: ConfigService) {
     this.region = this.configService.get<string>('AWS_S3_REGION');
+    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME');
     this.s3 = new S3Client({
       region: this.region,
       credentials: {
@@ -26,10 +30,9 @@ export class S3Service {
   }
 
   async uploadFile(file: Express.Multer.File, key: string) {
-    const bucket = this.configService.get<string>('AWS_S3_BUCKET_NAME');
-    const input: PutObjectCommandInput = {
+    const uploadInput: PutObjectCommandInput = {
       Body: file.buffer,
-      Bucket: bucket,
+      Bucket: this.bucketName,
       Key: key,
       ContentType: file.mimetype,
       ACL: 'public-read',
@@ -37,16 +40,30 @@ export class S3Service {
 
     try {
       const response: PutObjectCommandOutput = await this.s3.send(
-        new PutObjectCommand(input),
+        new PutObjectCommand(uploadInput),
       );
 
       if (response.$metadata.httpStatusCode === 200) {
-        return `https://${bucket}.s3.${this.region}.amazonaws.com/${key}`;
+        return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
       }
 
       throw new Error('Error uploading file');
     } catch (e) {
       this.logger.error('Error uploading file to s3: ', e);
+      throw e;
+    }
+  }
+
+  async deleteFile(key: string) {
+    const deleteInput: DeleteObjectCommandInput = {
+      Bucket: this.bucketName,
+      Key: key,
+    };
+
+    try {
+      await this.s3.send(new DeleteObjectCommand(deleteInput));
+    } catch (e) {
+      this.logger.error('Error deleting file from s3: ', e);
       throw e;
     }
   }

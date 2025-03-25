@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { FindManyOptions, Repository } from 'typeorm';
 import { Airplane } from './entities/airplane.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,12 +23,27 @@ export class AirplanesService {
   }
 
   async uploadFile(file: Express.Multer.File, airplaneId: string) {
-    const key = `${file.fieldname} ${Date.now()}`;
+    const airplane = await this.airplaneRepository.findOneByOrFail({
+      id: airplaneId,
+    });
+    const key = `${file.fieldname}_${Date.now()}`;
 
-    const fileUrl = await this.s3Service.uploadFile(file, key);
-    await this.airplaneRepository.update(
-      { id: airplaneId },
-      { imageUrl: fileUrl },
-    );
+    airplane.imageUrl = await this.s3Service.uploadFile(file, key);
+    await this.airplaneRepository.save(airplane);
+  }
+
+  async deleteFile(airplaneId: string) {
+    const airplane = await this.airplaneRepository.findOneByOrFail({
+      id: airplaneId,
+    });
+    if (!airplane.imageUrl) {
+      throw new BadRequestException('No image to delete');
+    }
+    const key = airplane.imageUrl.split('/').pop() ?? '';
+
+    await this.s3Service.deleteFile(key);
+
+    airplane.imageUrl = '';
+    await this.airplaneRepository.save(airplane);
   }
 }

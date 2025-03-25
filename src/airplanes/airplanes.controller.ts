@@ -4,6 +4,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -21,12 +22,17 @@ export class AirplanesController {
     return await this.airplanesService.upsert(airplaneDto);
   }
 
-  @Post('/:id/upload-file')
+  @Put('/:id/upload-file')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Param('id') airplaneId: string,
   ) {
     await this.airplanesService.uploadFile(file, airplaneId);
+  }
+
+  @Put('/:id/delete-file')
+  async deleteFile(@Param('id') airplaneId: string) {
+    await this.airplanesService.deleteFile(airplaneId);
   }
 }
