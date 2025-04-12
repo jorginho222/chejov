@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Put,
+  Req,
 } from '@nestjs/common';
 import { FlightsUpsertService } from './flights.upsert.service';
 import { Flight } from './entities/flight.entity';
@@ -16,6 +17,8 @@ import { FlightsSearchService } from './flights.search.service';
 import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
 import { AirplaneSeat } from './valueObjects/airplane.seat';
 import { FlightsReserveService } from './flights.reserve.service';
+import { Request } from 'express';
+import { FindManyOptions } from 'typeorm';
 
 @Controller('flights')
 export class FlightsController {
@@ -26,8 +29,12 @@ export class FlightsController {
   ) {}
 
   @Get()
-  async findAll(): Promise<Flight[]> {
-    return await this.flightsSearchService.search({});
+  async searchByCriteria(@Req() request: Request): Promise<Flight[]> {
+    const criteria = JSON.parse(
+      request.query.criteria as string,
+    ) as FindManyOptions<Flight>;
+
+    return await this.flightsSearchService.search(criteria);
   }
 
   @Post()
