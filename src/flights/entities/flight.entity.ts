@@ -4,6 +4,7 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Airplane } from '../../airplanes/entities/airplane.entity';
@@ -11,8 +12,9 @@ import { Passenger } from '../../passengers/entities/passenger.entity';
 import { FlightStatus } from '../types/flight.status';
 import { FlightCode } from '../valueObjects/flight.code';
 import { AirplaneSeat } from '../valueObjects/airplane.seat';
-import { FlightPrices } from '../valueObjects/flight.prices';
 import { BadRequestException } from '@nestjs/common';
+import { Airline } from '../../airlines/entities/airline.entity';
+import { Order } from '../../orders/entities/order.entity';
 
 @Entity()
 export class Flight {
@@ -31,6 +33,9 @@ export class Flight {
   @ManyToOne(() => Airplane)
   airplane: Airplane;
 
+  @ManyToOne(() => Airline)
+  airline: Airline;
+
   @Column()
   departure: Date;
 
@@ -45,14 +50,17 @@ export class Flight {
   })
   passengers: Array<Passenger>;
 
+  @OneToMany(() => Order, (order) => order.flight)
+  orders: Array<Order>;
+
   @Column()
   status: FlightStatus;
 
   @Column('json')
   seats: Array<AirplaneSeat>;
 
-  @Column('json')
-  flightPrices: Array<FlightPrices>;
+  @Column()
+  basePrice: number;
 
   @Column({ default: false })
   isFullyReserved: boolean;
