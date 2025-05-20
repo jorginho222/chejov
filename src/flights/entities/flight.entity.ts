@@ -4,7 +4,6 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Airplane } from '../../airplanes/entities/airplane.entity';
@@ -30,6 +29,9 @@ export class Flight {
   @Column()
   destination: string;
 
+  @Column()
+  distance: number;
+
   @ManyToOne(() => Airplane)
   airplane: Airplane;
 
@@ -50,7 +52,12 @@ export class Flight {
   })
   passengers: Array<Passenger>;
 
-  @OneToMany(() => Order, (order) => order.flight)
+  @ManyToMany(() => Order, (order) => order.flights)
+  @JoinTable({
+    name: 'flight_order',
+    joinColumns: [{ name: 'flight_id' }],
+    inverseJoinColumns: [{ name: 'order_id' }],
+  })
   orders: Array<Order>;
 
   @Column()

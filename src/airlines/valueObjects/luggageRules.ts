@@ -1,24 +1,24 @@
 export class LuggageRules {
   constructor(
+    private _priceHandBaggage: number,
     private _maxHandBaggage: number,
-    private _priceExceededBaggage: number,
-    private _maxCheckedLuggage: number,
     private _priceCheckedLuggage: number,
+    private _priceExceededWeight: number,
   ) {}
+
+  get priceHandBaggage(): number {
+    return this._priceHandBaggage;
+  }
 
   get maxHandBaggage(): number {
     return this._maxHandBaggage;
   }
 
-  get priceExceededBaggage(): number {
-    return this._priceExceededBaggage;
-  }
-
-  get maxCheckedLuggage(): number {
-    return this._maxCheckedLuggage;
-  }
-
   get priceCheckedLuggage(): number {
     return this._priceCheckedLuggage;
+  }
+
+  get priceExceededWeight(): number {
+    return this._priceExceededWeight;
   }
 }

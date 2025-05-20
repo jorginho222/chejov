@@ -14,8 +14,11 @@ export class Airline {
   code: string;
 
   @Column('json')
-  luggageRules: Array<LuggageRules>;
+  luggageRules: LuggageRules;
 
   @Column('json')
-  flightClassPriceIncrements: FlightClassPriceIncrements;
+  flightClassPriceIncrements: FlightClassPriceIncrements[];
+
+  @Column()
+  redeemFee: number;
 }
