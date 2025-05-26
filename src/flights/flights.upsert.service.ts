@@ -43,7 +43,6 @@ export class FlightsUpsertService {
       arrival: flightDto.arrival,
       passengers: [],
       status: FlightStatus.Scheduled,
-      flightPrices: flightDto.flightPrices,
     });
 
     flight.validate();

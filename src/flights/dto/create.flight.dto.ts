@@ -7,6 +7,7 @@ export class CreateFlightDto {
   @IsUUID('4')
   id: string;
 
+  @IsNotEmpty()
   airline: AirlineDto;
 
   @IsDate()
@@ -17,6 +18,7 @@ export class CreateFlightDto {
   @Type(() => Date)
   arrival: Date;
 
+  @IsNotEmpty()
   airplane: CreateAirplaneDto;
 
   @IsString()

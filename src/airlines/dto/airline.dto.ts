@@ -1,6 +1,9 @@
-import { IsString, Length } from 'class-validator';
+import { IsString, IsUUID, Length } from 'class-validator';
 
 export class AirlineDto {
+  @IsUUID('4')
+  id: string;
+
   @IsString()
   name: string;
 

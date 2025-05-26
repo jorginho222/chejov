@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinTable,
-  ManyToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Flight } from '../../flights/entities/flight.entity';
 
 @Entity()
@@ -25,10 +19,5 @@ export class Passenger {
   email: string;
 
   @ManyToMany(() => Flight, (flight) => flight.passengers, { nullable: true })
-  @JoinTable({
-    name: 'flight_passengers',
-    joinColumns: [{ name: 'passenger_id' }],
-    inverseJoinColumns: [{ name: 'flight_id' }],
-  })
   flights: Array<Flight>;
 }

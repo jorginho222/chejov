@@ -1,7 +1,6 @@
 import {
   Column,
   Entity,
-  JoinTable,
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,23 +11,22 @@ import { FlightClasses } from '../../flights/types/flight.classes';
 import { User } from '../../users/entities/user.entity';
 import { FlightSelectionDto } from '../dto/flightSelectionDto';
 import { CreateOrderDto } from '../dto/create.order.dto';
+import { OrderStatus } from '../types/order.status';
 
 @Entity()
 export class Order {
   redeemedQuantity: number;
 
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  readonly id: string;
 
   @Column()
   number: string;
 
+  @Column()
+  status: OrderStatus;
+
   @ManyToMany(() => Flight, (flight) => flight.orders)
-  @JoinTable({
-    name: 'flight_order',
-    joinColumns: [{ name: 'order_id' }],
-    inverseJoinColumns: [{ name: 'flight_id' }],
-  })
   flights: Array<Flight>;
 
   @Column('json')
@@ -57,7 +55,7 @@ export class Order {
 
   // TODO: store value in cents? round in before save event
   @Column()
-  grandTotal: number;
+  grandTotal: number = 0;
 
   public calculateTotal(orderDto: CreateOrderDto): void {
     const flightSelectionDtoArray = orderDto.flightSelection;
