@@ -1,6 +1,12 @@
 import { CreateAirplaneDto } from '../../airplanes/dto/create.airplane.dto';
 import { AirlineDto } from '../../airlines/dto/airline.dto';
-import { IsDate, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import {
+  IsDate,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateFlightDto {
@@ -28,4 +34,10 @@ export class CreateFlightDto {
   @IsString()
   @IsNotEmpty()
   destination: string;
+
+  @IsNumber()
+  basePrice: number;
+
+  @IsNumber()
+  distance: number;
 }

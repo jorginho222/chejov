@@ -4,6 +4,7 @@ import { Order } from './entities/order.entity';
 import { Repository } from 'typeorm';
 import { Flight } from '../flights/entities/flight.entity';
 import { OrderLuggage } from './valueObjects/order.luggage';
+import { User } from '../users/entities/user.entity';
 
 export class OrderUpsertService {
   constructor(
@@ -11,6 +12,8 @@ export class OrderUpsertService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(Flight)
     private readonly flightRepository: Repository<Flight>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async create(orderDto: CreateOrderDto) {
@@ -34,7 +37,7 @@ export class OrderUpsertService {
       false,
     );
 
-    const user = await this.flightRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { id: orderDto.userId },
     });
     if (!user) {

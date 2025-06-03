@@ -12,11 +12,7 @@ export class AirlinesService {
   ) {}
 
   async create(airlineDto: AirlineDto) {
-    const airline = this.airlineRepository.create({
-      id: airlineDto.id,
-      name: airlineDto.name,
-      code: airlineDto.code,
-    });
+    const airline = this.airlineRepository.create(airlineDto);
 
     await this.airlineRepository.save(airline);
   }

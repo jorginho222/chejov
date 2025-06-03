@@ -33,16 +33,20 @@ export class FlightsUpsertService {
     });
     if (airplaneSearch.length === 0) throw new Error('Airplane not found');
 
+    console.log(flightDto.departure);
     const flight = this.flightRepository.create({
       id: flightDto.id,
       code: currentCode,
       origin: flightDto.origin,
       destination: flightDto.destination,
+      distance: flightDto.distance,
       airplane: airplaneSearch[0],
       departure: flightDto.departure,
       arrival: flightDto.arrival,
       passengers: [],
+      orders: [],
       status: FlightStatus.Scheduled,
+      basePrice: flightDto.basePrice,
     });
 
     flight.validate();
