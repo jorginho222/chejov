@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Flight } from '../flights/entities/flight.entity';
 import { OrderLuggage } from './valueObjects/order.luggage';
 import { User } from '../users/entities/user.entity';
+import { OrderStatus } from './types/order.status';
 
 export class OrderUpsertService {
   constructor(
@@ -22,6 +23,7 @@ export class OrderUpsertService {
     for (const flightSelectionDto of orderDto.flightSelection) {
       const flight = await this.flightRepository.findOne({
         where: { id: flightSelectionDto.flightId },
+        relations: ['airline'],
       });
       if (!flight) {
         throw new Error('Flight not found');
@@ -46,8 +48,10 @@ export class OrderUpsertService {
     const order: Order = this.orderRepository.create({
       id: orderDto.id,
       number: '1',
+      status: OrderStatus.Created,
       flights,
       luggage,
+      class: orderDto.class,
       user,
       passengersQuantity,
     });

@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { FlightSelectionDto } from '../dto/flightSelectionDto';
 import { CreateOrderDto } from '../dto/create.order.dto';
 import { OrderStatus } from '../types/order.status';
+import { BadRequestException } from '@nestjs/common';
 
 @Entity()
 export class Order {
@@ -124,7 +125,6 @@ export class Order {
     flightSelectionDtoArray: FlightSelectionDto[],
   ): void {
     let availableMiles = this.user.accumulatedMiles;
-
     flightSelectionDtoArray.forEach((flightSelection) => {
       if (flightSelection.redeemQuantity === 0) {
         return;
@@ -138,7 +138,9 @@ export class Order {
 
       const necessaryMiles = flight.distance * flightSelection.redeemQuantity;
       if (availableMiles < necessaryMiles) {
-        throw new Error('Not enough miles to redeem selected flights');
+        throw new BadRequestException({
+          message: 'Not enough miles',
+        });
       }
 
       availableMiles -= necessaryMiles;

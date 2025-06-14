@@ -1,6 +1,10 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { LuggageRules } from '../valueObjects/luggageRules';
 import { FlightClassPriceIncrements } from '../../flights/valueObjects/flight.class.price.increments';
+import {
+  flightClassPriceIncrementsTransformer,
+  luggageRulesTransformer,
+} from '../transformers/airlineTransformers';
 
 @Entity()
 export class Airline {
@@ -13,10 +17,16 @@ export class Airline {
   @Column()
   code: string;
 
-  @Column('json')
+  @Column({
+    type: 'json',
+    transformer: luggageRulesTransformer,
+  })
   luggageRules: LuggageRules;
 
-  @Column('json')
+  @Column({
+    type: 'json',
+    transformer: flightClassPriceIncrementsTransformer,
+  })
   flightClassPriceIncrements: FlightClassPriceIncrements[];
 
   @Column()

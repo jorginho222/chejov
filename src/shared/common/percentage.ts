@@ -1,5 +1,5 @@
 export class Percentage {
-  constructor(private value: number) {}
+  constructor(public value: number) {}
 
   getValue(): number {
     return this.value;

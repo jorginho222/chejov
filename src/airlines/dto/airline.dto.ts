@@ -26,7 +26,6 @@ export class AirlineDto {
   luggageRules: LuggageRules;
 
   @ValidateNested()
-  @Type(() => Array<FlightClassPriceIncrements>)
   flightClassPriceIncrements: Array<FlightClassPriceIncrements>;
 
   @IsNumber()

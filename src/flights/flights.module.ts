@@ -7,9 +7,13 @@ import { FlightsSearchService } from './flights.search.service';
 import { FlightsReserveService } from './flights.reserve.service';
 import { Passenger } from '../passengers/entities/passenger.entity';
 import { AirplanesModule } from '../airplanes/airplanes.module';
+import { Airline } from '../airlines/entities/airline.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Flight, Passenger]), AirplanesModule],
+  imports: [
+    TypeOrmModule.forFeature([Flight, Passenger, Airline]),
+    AirplanesModule,
+  ],
   controllers: [FlightsController],
   providers: [
     FlightsUpsertService,

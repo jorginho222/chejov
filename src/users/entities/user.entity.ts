@@ -5,4 +5,12 @@ import { Column, Entity } from 'typeorm';
 export class User extends Passenger {
   @Column()
   accumulatedMiles: number;
+
+  public getAccumulatedMiles(): number {
+    return this.accumulatedMiles;
+  }
+
+  public setAccumulatedMiles(accumulatedMiles: number): void {
+    this.accumulatedMiles = accumulatedMiles;
+  }
 }

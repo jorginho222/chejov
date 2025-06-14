@@ -9,12 +9,15 @@ import { FlightCode } from './valueObjects/flight.code';
 import { UpdateFlightScheduleDto } from './dto/update.flight.schedule.dto';
 import { FlightsSearchService } from './flights.search.service';
 import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
+import { Airline } from '../airlines/entities/airline.entity';
 
 @Injectable()
 export class FlightsUpsertService {
   constructor(
     @InjectRepository(Flight)
     private readonly flightRepository: Repository<Flight>,
+    @InjectRepository(Airline)
+    private readonly airlineRepository: Repository<Airline>,
     private readonly flightSearchService: FlightsSearchService,
     private readonly airplaneService: AirplanesService,
   ) {}
@@ -33,10 +36,17 @@ export class FlightsUpsertService {
     });
     if (airplaneSearch.length === 0) throw new Error('Airplane not found');
 
-    console.log(flightDto.departure);
+    const airlineSearch = await this.airlineRepository.findOne({
+      where: {
+        id: flightDto.airline.id,
+      },
+    });
+    if (!airlineSearch) throw new Error('Airline not found');
+
     const flight = this.flightRepository.create({
       id: flightDto.id,
       code: currentCode,
+      airline: airlineSearch,
       origin: flightDto.origin,
       destination: flightDto.destination,
       distance: flightDto.distance,

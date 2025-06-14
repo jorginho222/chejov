@@ -1,9 +1,9 @@
 export class LuggageRules {
   constructor(
-    private _priceHandBaggage: number,
-    private _maxHandBaggage: number,
-    private _priceCheckedLuggage: number,
-    private _priceExceededWeight: number,
+    public _priceHandBaggage: number,
+    public _maxHandBaggage: number,
+    public _priceCheckedLuggage: number,
+    public _priceExceededWeight: number,
   ) {}
 
   get priceHandBaggage(): number {
