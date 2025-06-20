@@ -10,7 +10,11 @@ export class User extends Passenger {
     return this.accumulatedMiles;
   }
 
-  public setAccumulatedMiles(accumulatedMiles: number): void {
+  public addMiles(miles: number): void {
+    this.setAccumulatedMiles((this.accumulatedMiles += miles));
+  }
+
+  private setAccumulatedMiles(accumulatedMiles: number): void {
     this.accumulatedMiles = accumulatedMiles;
   }
 }
