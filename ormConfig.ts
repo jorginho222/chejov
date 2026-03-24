@@ -12,7 +12,9 @@ const ormConfig: PostgresConnectionOptions = {
   username: process.env.DB_USER ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   entities: [Airplane, Flight, Passenger],
-  synchronize: true, // it is recommended to set this property to false in production, because this sync functionality can drop all or part of production data
+  synchronize: false, // it is recommended to set this property to false in production, because this sync functionality can drop all or part of production data
+  ssl:
+    process.env.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : false,
 };
 
 export default ormConfig;
