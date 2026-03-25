@@ -3,6 +3,7 @@ import { Airplane } from './src/airplanes/entities/airplane.entity';
 import { Flight } from './src/flights/entities/flight.entity';
 import { Passenger } from './src/passengers/entities/passenger.entity';
 import * as process from 'node:process';
+import { DataSource } from 'typeorm';
 
 const ormConfig: PostgresConnectionOptions = {
   type: 'postgres',
@@ -12,9 +13,12 @@ const ormConfig: PostgresConnectionOptions = {
   username: process.env.DB_USER ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   entities: [Airplane, Flight, Passenger],
-  synchronize: false, // it is recommended to set this property to false in production, because this sync functionality can drop all or part of production data
+  logging: true,
+  synchronize: false,
   ssl:
     process.env.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : false,
+  migrations: ['dist/src/migration/*.js'],
 };
 
+export const appDataSource = new DataSource(ormConfig);
 export default ormConfig;
