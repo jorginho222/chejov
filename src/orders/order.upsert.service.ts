@@ -54,6 +54,12 @@ export class OrderUpsertService {
       class: orderDto.class,
       user,
       passengersQuantity,
+      luggageTotal: 0,
+      flightsTotal: 0,
+      redeemFee: 0,
+      grandTotal: 0,
+      exchangedMiles: 0,
+      redeemedQuantity: 0,
     });
 
     order.calculateTotal(orderDto);

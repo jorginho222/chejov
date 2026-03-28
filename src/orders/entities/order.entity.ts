@@ -60,6 +60,9 @@ export class Order {
 
   public calculateTotal(orderDto: CreateOrderDto): void {
     const flightSelectionDtoArray = orderDto.flightSelection;
+    this.exchangedMiles = 0;
+    this.redeemedQuantity = 0;
+    this.redeemFee = 0;
     this.redeemFlightsWithMiles(flightSelectionDtoArray);
     this.calculateFlightTotal(flightSelectionDtoArray);
     this.calculateLuggageTotal();
@@ -70,6 +73,7 @@ export class Order {
   private calculateFlightTotal(
     flightSelectionArray: FlightSelectionDto[],
   ): void {
+    this.flightsTotal = 0;
     flightSelectionArray.forEach((flightSelection) => {
       if (flightSelection.purchaseQuantity === 0) {
         return;
@@ -96,28 +100,35 @@ export class Order {
   }
 
   private calculateLuggageTotal(): void {
+    this.luggageTotal = 0;
     this.flights.forEach((flight) => {
       let partialTotal = 0;
 
       const airlineLuggageRules = flight.airline.luggageRules;
+      if (!airlineLuggageRules) {
+        return;
+      }
+
       if (
         this.luggage.handBaggageQuantity > airlineLuggageRules.maxHandBaggage
       ) {
-        partialTotal +=
-          airlineLuggageRules.priceHandBaggage *
-          (this.luggage.handBaggageQuantity -
-            airlineLuggageRules.maxHandBaggage);
+        const excessHandBaggage =
+          this.luggage.handBaggageQuantity - airlineLuggageRules.maxHandBaggage;
+        const priceHandBaggage = airlineLuggageRules.priceHandBaggage || 0;
+        partialTotal += excessHandBaggage * priceHandBaggage;
       }
 
-      partialTotal +=
-        this.luggage.checkedLuggageQuantity *
-        airlineLuggageRules.priceCheckedLuggage;
+      const checkedLuggageQuantity = this.luggage.checkedLuggageQuantity || 0;
+      const priceCheckedLuggage = airlineLuggageRules.priceCheckedLuggage || 0;
+      partialTotal += checkedLuggageQuantity * priceCheckedLuggage;
 
       if (this.luggage.isWeightExceeded) {
-        partialTotal += airlineLuggageRules.priceExceededWeight;
+        const priceExceededWeight =
+          airlineLuggageRules.priceExceededWeight || 0;
+        partialTotal += priceExceededWeight;
       }
 
-      this.luggageTotal = partialTotal;
+      this.luggageTotal += partialTotal;
     });
   }
 
