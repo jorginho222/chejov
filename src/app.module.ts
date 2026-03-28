@@ -5,7 +5,7 @@ import { FlightsModule } from './flights/flights.module';
 import { AirplanesModule } from './airplanes/airplanes.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassengersModule } from './passengers/passengers.module';
-import ormConfig from '../ormConfig';
+import { ormConfigOptions } from '../ormConfig';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { S3Module } from './shared/s3/s3.module';
@@ -14,7 +14,7 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(ormConfig),
+    TypeOrmModule.forRoot(ormConfigOptions),
     ConfigModule.forRoot({
       envFilePath: '.env.local',
     }),
