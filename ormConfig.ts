@@ -1,4 +1,4 @@
-import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { Airplane } from './src/airplanes/entities/airplane.entity';
 import { Flight } from './src/flights/entities/flight.entity';
 import { Passenger } from './src/passengers/entities/passenger.entity';
@@ -6,8 +6,12 @@ import * as process from 'node:process';
 import { Order } from './src/orders/entities/order.entity';
 import { User } from './src/users/entities/user.entity';
 import { Airline } from './src/airlines/entities/airline.entity';
+import * as dotenv from 'dotenv';
 
-const ormConfig: PostgresConnectionOptions = {
+// Always try to load .env.local first (it won't override existing azure production env vars)
+dotenv.config({ path: '.env.local' });
+
+const ormConfigOptions: DataSourceOptions = {
   type: 'postgres',
   database: process.env.DB_NAME ?? 'chejov',
   host: process.env.DB_HOST ?? 'localhost',
@@ -15,7 +19,14 @@ const ormConfig: PostgresConnectionOptions = {
   username: process.env.DB_USER ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'postgres',
   entities: [Airplane, Flight, Passenger, Airline, Order, User],
-  synchronize: true, // it is recommended to set this property to false in production, because this sync functionality can drop all or part of production data
+  logging: true,
+  synchronize: process.env.ENVIRONMENT === 'development',
+  ssl:
+    process.env.ENVIRONMENT === 'development'
+      ? false
+      : { rejectUnauthorized: false },
+  migrations: ['dist/src/migration/*.js'],
 };
 
-export default ormConfig;
+export const ormConfig = new DataSource(ormConfigOptions);
+export { ormConfigOptions };

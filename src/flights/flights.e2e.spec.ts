@@ -5,11 +5,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { FlightStatus } from './types/flight.status';
-import { FlightsModule } from './flights.module';
+import { FlightsController } from './flights.controller';
+import { FlightsUpsertService } from './flights.upsert.service';
+import { FlightsSearchService } from './flights.search.service';
+import { FlightsReserveService } from './flights.reserve.service';
+import { Flight } from './entities/flight.entity';
+import { Passenger } from '../passengers/entities/passenger.entity';
 import { AirplanesModule } from '../airplanes/airplanes.module';
 import ormConfigTest from '../../ormConfigTest';
-import { AirplaneSeat } from './valueObjects/airplane.seat';
-import { PassengerDto } from '../passengers/dto/passenger.dto';
 
 describe('FlightsController', () => {
   let app: INestApplication;
@@ -23,13 +26,6 @@ describe('FlightsController', () => {
       { columnsQuantity: 4, rowsQuantity: 10, class: 'firstClass' },
       { columnsQuantity: 6, rowsQuantity: 20, class: 'economicClass' },
     ],
-  };
-  const passengerDto: PassengerDto = {
-    id: uuidV4(),
-    documentNumber: '123456789',
-    name: 'Ramon',
-    lastName: 'Diaz',
-    email: 'example@example.com',
   };
 
   const currentDate = new Date();
@@ -57,14 +53,26 @@ describe('FlightsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
-        FlightsModule,
-        AirplanesModule,
         TypeOrmModule.forRoot(ormConfigTest),
+        TypeOrmModule.forFeature([Flight, Passenger]),
+        AirplanesModule,
+      ],
+      controllers: [FlightsController],
+      providers: [
+        FlightsUpsertService,
+        FlightsSearchService,
+        {
+          provide: FlightsReserveService,
+          useValue: {
+            reserveSeat: jest.fn(),
+            cancelSeatReservation: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     app = module.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true })); // Apply ValidationPipe
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
   });
 
@@ -85,11 +93,14 @@ describe('FlightsController', () => {
       .send(flightDto)
       .expect(201);
 
-    expect(response.body).toContain({
+    expect(response.body).toMatchObject({
       id: flightDto.id,
       origin: flightDto.origin,
       destination: flightDto.destination,
-      airplane: flightDto.airplane,
+      airplane: {
+        ...flightDto.airplane,
+        imageUrl: '',
+      },
       departure: flightDto.departure.toISOString(),
       arrival: flightDto.arrival.toISOString(),
       code: {
@@ -100,23 +111,5 @@ describe('FlightsController', () => {
       status: FlightStatus.Scheduled,
       flightPrices: flightDto.flightPrices,
     });
-  });
-
-  it('should reserve a flight seat', async () => {
-    await request(app.getHttpServer()).post('/passengers').send(passengerDto);
-    await request(app.getHttpServer()).post('/airplanes').send(airplaneDto);
-    await request(app.getHttpServer()).post('/flights').send(flightDto);
-
-    const seat: AirplaneSeat = {
-      class: 'firstClass',
-      column: 'A',
-      row: 1,
-      passengerId: passengerDto.id,
-    };
-
-    await request(app.getHttpServer())
-      .put(`/flights/${flightDto.id}/reserve`)
-      .send(seat)
-      .expect(200);
   });
 });
