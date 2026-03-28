@@ -1,10 +1,41 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export class LuggageRules {
+  @ApiProperty({
+    example: 100,
+    description: 'Precio del equipaje de mano',
+  })
+  public _priceHandBaggage: number;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Cantidad máxima de equipaje de mano',
+  })
+  public _maxHandBaggage: number;
+
+  @ApiProperty({
+    example: 200,
+    description: 'Precio del equipaje facturado',
+  })
+  public _priceCheckedLuggage: number;
+
+  @ApiProperty({
+    example: 300,
+    description: 'Precio por exceso de peso',
+  })
+  public _priceExceededWeight: number;
+
   constructor(
-    public _priceHandBaggage: number,
-    public _maxHandBaggage: number,
-    public _priceCheckedLuggage: number,
-    public _priceExceededWeight: number,
-  ) {}
+    priceHandBaggage: number,
+    maxHandBaggage: number,
+    priceCheckedLuggage: number,
+    priceExceededWeight: number,
+  ) {
+    this._priceHandBaggage = priceHandBaggage;
+    this._maxHandBaggage = maxHandBaggage;
+    this._priceCheckedLuggage = priceCheckedLuggage;
+    this._priceExceededWeight = priceExceededWeight;
+  }
 
   get priceHandBaggage(): number {
     return this._priceHandBaggage;

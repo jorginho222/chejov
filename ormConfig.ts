@@ -11,6 +11,7 @@ import * as dotenv from 'dotenv';
 // Always try to load .env.local first (it won't override existing azure production env vars)
 dotenv.config({ path: '.env.local' });
 
+let isDevelopment = process.env.ENVIRONMENT === 'development';
 const ormConfigOptions: DataSourceOptions = {
   type: 'postgres',
   database: process.env.DB_NAME ?? 'chejov',
@@ -20,11 +21,8 @@ const ormConfigOptions: DataSourceOptions = {
   password: process.env.DB_PASSWORD ?? 'postgres',
   entities: [Airplane, Flight, Passenger, Airline, Order, User],
   logging: true,
-  synchronize: process.env.ENVIRONMENT === 'development',
-  ssl:
-    process.env.ENVIRONMENT === 'development'
-      ? false
-      : { rejectUnauthorized: false },
+  synchronize: isDevelopment,
+  ssl: isDevelopment ? false : { rejectUnauthorized: false },
   migrations: ['dist/src/migration/*.js'],
 };
 
