@@ -3,6 +3,21 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ormConfig } from '../ormConfig';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as appInsights from 'applicationinsights';
+
+// important: keep this app insights config at the top
+if (process.env.APPLICATION_INSIGHTS_CONNECTION_STRING) {
+  appInsights
+    .setup(process.env.APPLICATION_INSIGHTS_CONNECTION_STRING)
+    .setAutoDependencyCorrelation(true)
+    .setAutoCollectRequests(true)
+    .setAutoCollectPerformance(true, true)
+    .setAutoCollectExceptions(true)
+    .setAutoCollectDependencies(true) // Aquí es donde verás a Postgres
+    .setAutoCollectConsole(true)
+    .setUseDiskRetryCaching(true)
+    .start();
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

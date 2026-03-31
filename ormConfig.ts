@@ -11,7 +11,7 @@ import * as dotenv from 'dotenv';
 // Always try to load .env.local first (it won't override existing azure production env vars)
 dotenv.config({ path: '.env.local' });
 
-let isDevelopment = process.env.ENVIRONMENT === 'development';
+const isDevelopment = process.env.ENVIRONMENT === 'development';
 const ormConfigOptions: DataSourceOptions = {
   type: 'postgres',
   database: process.env.DB_NAME ?? 'chejov',
