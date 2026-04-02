@@ -9,4 +9,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('error_test')
+  getError() {
+    throw new Error('¡Prueba de Stack Trace en Azure!');
+  }
 }
