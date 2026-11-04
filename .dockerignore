@@ -1,0 +1,14 @@
+.data
+.git
+.github
+.idea
+coverage
+dist
+node_modules
+.env
+.env.*
+*.log
+Dockerfile
+docker-compose.yaml
+CLAUDE.md
+README.md
