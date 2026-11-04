@@ -19,7 +19,7 @@ import { AirlinesModule } from './airlines/airlines.module';
   imports: [
     TypeOrmModule.forRoot(ormConfigOptions),
     ConfigModule.forRoot({
-      envFilePath: '.env.local',
+      envFilePath: ['.env.local', '.env'],
     }),
     EventEmitterModule.forRoot(),
     MailerModule.forRoot(mailerConfig),

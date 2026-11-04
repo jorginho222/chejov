@@ -8,8 +8,8 @@ import { User } from './src/users/entities/user.entity';
 import { Airline } from './src/airlines/entities/airline.entity';
 import * as dotenv from 'dotenv';
 
-// Always try to load .env.local first (it won't override existing azure production env vars)
-dotenv.config({ path: '.env.local' });
+// Load .env.local, then .env (neither overrides existing azure production env vars)
+dotenv.config({ path: ['.env.local', '.env'] });
 
 const isDevelopment = process.env.ENVIRONMENT === 'development';
 const ormConfigOptions: DataSourceOptions = {

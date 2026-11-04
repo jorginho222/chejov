@@ -8,10 +8,10 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "node dist/main",
+    "start": "node dist/src/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/src/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -22,7 +22,17 @@
     "migration:generate": "npm run typeorm migration:generate -- -d ./ormConfig.ts",
     "migration:run": "npm run typeorm migration:run -- -d ./ormConfig.ts",
     "migration:revert": "npm run typeorm migration:revert -- -d ./ormConfig.ts",
-    "schema:sync": "npm run typeorm schema:sync -- -d ./ormConfig.ts"
+    "schema:sync": "npm run typeorm schema:sync -- -d ./ormConfig.ts",
+    "docker:up": "docker compose up -d",
+    "docker:build": "docker compose up -d --build",
+    "docker:stop": "docker compose stop",
+    "docker:logs": "docker compose logs -f api",
+    "docker:shell": "docker compose exec api sh",
+    "docker:exec": "docker compose exec api",
+    "docker:npm": "docker compose exec api npm",
+    "docker:install": "docker compose exec api npm install",
+    "docker:test": "docker compose exec api npm test",
+    "docker:lint": "docker compose exec api npm run lint"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.774.0",
