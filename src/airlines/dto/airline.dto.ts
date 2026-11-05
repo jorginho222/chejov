@@ -7,12 +7,16 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { LuggageRules } from '../valueObjects/luggageRules';
 import { FlightClassPriceIncrements } from '../../flights/valueObjects/flight.class.price.increments';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+
+// IATA airline designators, such as LA or U2
+export const AIRLINE_CODE_PATTERN = /^[A-Z0-9]{2}$/;
 
 export class AirlineDto {
   @ApiProperty({
@@ -31,11 +35,17 @@ export class AirlineDto {
   name: string;
 
   @ApiProperty({
-    example: 'LAG',
-    description: 'Código de la aerolínea',
+    example: 'LG',
+    description:
+      'Código IATA de la aerolínea: 2 letras o dígitos, único. Se guarda en mayúsculas',
   })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   @IsString()
-  @Length(2, 2)
+  @Matches(AIRLINE_CODE_PATTERN, {
+    message: 'code must be 2 letters or digits, such as LA or U2',
+  })
   code: string;
 
   @ApiProperty({
