@@ -44,7 +44,8 @@ npm run test:debug                             # Debug tests with the Node inspe
 - `ENVIRONMENT=development` controls the database mode:
   - **Development:** TypeORM `synchronize: true`, no SSL, migrations are not run.
   - **Anything else, including unset:** no synchronize, SSL on, and `main.ts` runs pending migrations at boot.
-- Swagger UI is served at `/docs`.
+- CORS is enabled in `main.ts` for all origins. A new HTTP method must be added to its `methods` list, or browsers will block it at preflight.
+- Swagger UI is served at `/docs`. The bundled UI doesn't render HTTP `QUERY` operations, so `QUERY /flights` is missing from the page, though it is in the `/docs-json` document.
 
 ## Migrations
 
@@ -86,6 +87,8 @@ Because development relies on `synchronize`, a schema change works locally witho
 - Miles redemption: costs `distance × redeemQuantity` miles, plus the airline's `redeemFee`.
 
 Money columns use `moneyColumn` from `src/shared/common/money.ts` (`numeric(12,2)`, with a transformer because the Postgres driver returns numeric values as strings). Amounts are rounded with `roundMoney` to 2 decimals, and each ticket price is rounded before multiplying by quantity.
+
+**Flight search uses HTTP `QUERY /flights`** with a JSON `SearchFlightsDto` body, and there is no `GET /flights`. The route decorator is `@QueryMethod()`, which needs a newer Nest than 11.0.7 (the project is on 11.2.8); `@Query()` is still the query-string param decorator. In specs, supertest's types need a cast to call it as a method (see `flights.query.e2e.spec.ts`), and with curl use `-X QUERY`.
 
 **Cross-module side effects use `@nestjs/event-emitter`.** Event classes live in the emitting module's `events/` directory, and handlers live in `subscribers/` (currently all under `passengers/`). A subscriber only runs if it is listed in its module's `providers`.
 

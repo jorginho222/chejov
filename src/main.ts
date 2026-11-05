@@ -22,6 +22,11 @@ if (process.env.APPLICATION_INSIGHTS_CONNECTION_STRING) {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // The cors package's default methods leave out QUERY, used by flight search
+  app.enableCors({
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'QUERY'],
+  });
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   await ormConfig.initialize();

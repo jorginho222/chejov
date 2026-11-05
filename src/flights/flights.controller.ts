@@ -1,13 +1,14 @@
 import {
   Body,
   Controller,
-  Get,
+  Headers,
   HttpCode,
   Param,
   Patch,
   Post,
   Put,
-  Req,
+  QueryMethod,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { FlightsUpsertService } from './flights.upsert.service';
 import { Flight } from './entities/flight.entity';
@@ -17,8 +18,7 @@ import { FlightsSearchService } from './flights.search.service';
 import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
 import { AirplaneSeat } from './valueObjects/airplane.seat';
 import { FlightsReserveService } from './flights.reserve.service';
-import { Request } from 'express';
-import { FindManyOptions } from 'typeorm';
+import { SearchFlightsDto } from './dto/search.flights.dto';
 
 @Controller('flights')
 export class FlightsController {
@@ -28,13 +28,20 @@ export class FlightsController {
     private readonly flightsReserveService: FlightsReserveService,
   ) {}
 
-  @Get()
-  async searchByCriteria(@Req() request: Request): Promise<Flight[]> {
-    const criteria = JSON.parse(
-      request.query.criteria as string,
-    ) as FindManyOptions<Flight>;
+  @QueryMethod()
+  async search(
+    @Headers('content-type') contentType: string | undefined,
+    @Body() searchDto: SearchFlightsDto,
+  ): Promise<Flight[]> {
+    // The JSON body parser skips other types, which would look like "no filters"
+    const mediaType = contentType?.split(';')[0].trim().toLowerCase();
+    if (mediaType !== 'application/json') {
+      throw new UnsupportedMediaTypeException(
+        'QUERY /flights requires Content-Type: application/json',
+      );
+    }
 
-    return await this.flightsSearchService.search(criteria);
+    return await this.flightsSearchService.searchFlights(searchDto);
   }
 
   @Post()
