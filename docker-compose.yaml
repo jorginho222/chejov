@@ -18,7 +18,7 @@ services:
             - ENVIRONMENT=development
             - DB_HOST=db
             - DB_PORT=5432
-            - DB_NAME=${POSTGRES_DB:-chejov}
+            - DB_NAME=${POSTGRES_DB:-flights_management}
             - DB_USER=${POSTGRES_USER:-postgres}
             - DB_PASSWORD=${POSTGRES_PASSWORD:-postgres}
         volumes:
@@ -36,7 +36,7 @@ services:
             - .data/postgres:/var/lib/postgresql
 
         environment:
-            - POSTGRES_DB=${POSTGRES_DB:-chejov}
+            - POSTGRES_DB=${POSTGRES_DB:-flights_management}
             - POSTGRES_USER=${POSTGRES_USER:-postgres}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
         healthcheck:
