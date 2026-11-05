@@ -31,7 +31,7 @@ export class AirlineDto {
   name: string;
 
   @ApiProperty({
-    example: 'LAG',
+    example: 'LG',
     description: 'Código de la aerolínea',
   })
   @IsString()
