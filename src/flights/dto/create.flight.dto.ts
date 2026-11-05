@@ -68,7 +68,7 @@ export class CreateFlightDto {
     example: 1000,
     description: 'Precio base del vuelo',
   })
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   basePrice: number;
 
   @ApiProperty({

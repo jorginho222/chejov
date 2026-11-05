@@ -85,6 +85,8 @@ Because development relies on `synchronize`, a schema change works locally witho
 - Luggage: charged per flight using the airline's `luggageRules`.
 - Miles redemption: costs `distance × redeemQuantity` miles, plus the airline's `redeemFee`.
 
+Money columns use `moneyColumn` from `src/shared/common/money.ts` (`numeric(12,2)`, with a transformer because the Postgres driver returns numeric values as strings). Amounts are rounded with `roundMoney` to 2 decimals, and each ticket price is rounded before multiplying by quantity.
+
 **Cross-module side effects use `@nestjs/event-emitter`.** Event classes live in the emitting module's `events/` directory, and handlers live in `subscribers/` (currently all under `passengers/`). A subscriber only runs if it is listed in its module's `providers`.
 
 ## Work in progress
@@ -95,7 +97,6 @@ These parts are incomplete, so check before assuming they work:
 - `flight.cancelled` is emitted, but its mail subscriber is not registered in `PassengersModule` and its `@OnEvent` listens to `flight.reserved`.
 - `OrderCancelService.cancel` and `OrderUpsertService.update` are TODO stubs. `order.suspend.service.ts` is a copy of the cancel service, and `SuspendedOrder` is not registered in `ormConfig.ts`.
 - `FlightsReserveService` locks the flight row (`pessimistic_write`), which SQLite doesn't support, so tests that really reserve a seat need Postgres.
-- `FlightsUpsertService.updateStatus` and `updateSchedule` save the whole flight without that lock, so a reservation landing between their read and save is overwritten by their stale `seats`.
 - Cancelling a seat leaves the passenger in `flight_passengers`.
 - The airline transformers return JSON strings for `json` columns, so values are stored double-encoded as a JSON string and can't be queried with Postgres JSON operators.
 - Many services throw plain `Error` for not-found cases, which surfaces as HTTP 500 rather than 404.

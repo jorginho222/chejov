@@ -75,6 +75,6 @@ export class AirlineDto {
     example: 100,
     description: 'Tarifa de canje',
   })
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   redeemFee: number;
 }

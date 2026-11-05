@@ -14,6 +14,7 @@ import { AirplaneSeat } from '../valueObjects/airplane.seat';
 import { BadRequestException } from '@nestjs/common';
 import { Airline } from '../../airlines/entities/airline.entity';
 import { Order } from '../../orders/entities/order.entity';
+import { moneyColumn } from '../../shared/common/money';
 
 @Entity()
 export class Flight {
@@ -66,7 +67,7 @@ export class Flight {
   @Column('json')
   seats: Array<AirplaneSeat>;
 
-  @Column()
+  @Column(moneyColumn)
   basePrice: number;
 
   @Column({ default: false })
