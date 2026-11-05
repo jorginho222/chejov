@@ -13,6 +13,7 @@ import { FlightSelectionDto } from '../dto/flightSelectionDto';
 import { CreateOrderDto } from '../dto/create.order.dto';
 import { OrderStatus } from '../types/order.status';
 import { BadRequestException } from '@nestjs/common';
+import { moneyColumn, roundMoney } from '../../shared/common/money';
 
 @Entity()
 export class Order {
@@ -45,17 +46,16 @@ export class Order {
   @Column()
   exchangedMiles: number = 0;
 
-  @Column()
+  @Column(moneyColumn)
   flightsTotal: number = 0;
 
-  @Column()
+  @Column(moneyColumn)
   luggageTotal: number = 0;
 
-  @Column()
+  @Column(moneyColumn)
   redeemFee: number = 0;
 
-  // TODO: store value in cents? round in before save event
-  @Column()
+  @Column(moneyColumn)
   grandTotal: number = 0;
 
   public calculateTotal(orderDto: CreateOrderDto): void {
@@ -67,7 +67,9 @@ export class Order {
     this.calculateFlightTotal(flightSelectionDtoArray);
     this.calculateLuggageTotal();
 
-    this.grandTotal = this.flightsTotal + this.luggageTotal + this.redeemFee;
+    this.grandTotal = roundMoney(
+      this.flightsTotal + this.luggageTotal + this.redeemFee,
+    );
   }
 
   private calculateFlightTotal(
@@ -94,8 +96,10 @@ export class Order {
       }
       const incrementAmount =
         (flight.basePrice * incrementPercentage.increment.getValue()) / 100;
-      this.flightsTotal +=
-        (flight.basePrice + incrementAmount) * flightSelection.purchaseQuantity;
+      const ticketPrice = roundMoney(flight.basePrice + incrementAmount);
+      this.flightsTotal = roundMoney(
+        this.flightsTotal + ticketPrice * flightSelection.purchaseQuantity,
+      );
     });
   }
 
@@ -128,7 +132,7 @@ export class Order {
         partialTotal += priceExceededWeight;
       }
 
-      this.luggageTotal += partialTotal;
+      this.luggageTotal = roundMoney(this.luggageTotal + partialTotal);
     });
   }
 
@@ -157,8 +161,10 @@ export class Order {
       availableMiles -= necessaryMiles;
       this.exchangedMiles += necessaryMiles;
       this.redeemedQuantity += flightSelection.redeemQuantity;
-      this.redeemFee =
-        flightSelection.redeemQuantity * flight.airline.redeemFee;
+      this.redeemFee = roundMoney(
+        this.redeemFee +
+          flightSelection.redeemQuantity * flight.airline.redeemFee,
+      );
     });
   }
 }

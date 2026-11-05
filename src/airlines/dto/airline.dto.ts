@@ -1,4 +1,8 @@
 import {
+  ArrayNotEmpty,
+  ArrayUnique,
+  IsArray,
+  IsDefined,
   IsNumber,
   IsString,
   IsUUID,
@@ -44,26 +48,33 @@ export class AirlineDto {
     },
     description: 'Reglas de equipaje',
   })
+  @IsDefined()
   @ValidateNested()
   @Type(() => LuggageRules)
   luggageRules: LuggageRules;
 
   @ApiProperty({
     type: [FlightClassPriceIncrements],
-    example: {
-      class: 'economy',
-      increment: {
-        value: 10,
+    example: [
+      {
+        class: 'economy',
+        increment: {
+          value: 10,
+        },
       },
-    },
+    ],
   })
-  @ValidateNested()
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayUnique((item?: FlightClassPriceIncrements) => item?.class)
+  @ValidateNested({ each: true })
+  @Type(() => FlightClassPriceIncrements)
   flightClassPriceIncrements: Array<FlightClassPriceIncrements>;
 
   @ApiProperty({
     example: 100,
     description: 'Tarifa de canje',
   })
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   redeemFee: number;
 }

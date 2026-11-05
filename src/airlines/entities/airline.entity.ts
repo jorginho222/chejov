@@ -5,6 +5,7 @@ import {
   flightClassPriceIncrementsTransformer,
   luggageRulesTransformer,
 } from '../transformers/airlineTransformers';
+import { moneyColumn } from '../../shared/common/money';
 
 @Entity()
 export class Airline {
@@ -29,6 +30,6 @@ export class Airline {
   })
   flightClassPriceIncrements: FlightClassPriceIncrements[];
 
-  @Column()
+  @Column(moneyColumn)
   redeemFee: number;
 }
