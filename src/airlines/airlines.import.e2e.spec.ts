@@ -206,6 +206,37 @@ describe('POST /airlines/import', () => {
     expect(await repository.count()).toBe(1);
   });
 
+  it('stores codes uppercase and treats them as duplicates whatever their case', async () => {
+    await upload(await buildFile([validRow('Nimbus Air', 'nx')])).expect(201);
+    expect((await repository.findOneBy({ name: 'Nimbus Air' }))?.code).toBe(
+      'NX',
+    );
+
+    const response = await upload(
+      await buildFile([validRow('Other', 'Nx'), validRow('Again', 'nX')]),
+    ).expect(400);
+
+    const body = response.body as { errors: unknown[] };
+    expect(body.errors).toEqual([
+      {
+        row: 2,
+        column: 'code',
+        messages: ['an airline with code NX already exists'],
+      },
+      {
+        row: 3,
+        column: 'code',
+        messages: ['code NX is already used in row 2'],
+      },
+      {
+        row: 3,
+        column: 'code',
+        messages: ['an airline with code NX already exists'],
+      },
+    ]);
+    expect(await repository.count()).toBe(1);
+  });
+
   it('rejects a file with missing columns', async () => {
     const headers = HEADERS.filter((header) => header !== 'first');
 

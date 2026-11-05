@@ -4,12 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { Airline } from './entities/airline.entity';
 import { AirlineDto } from './dto/airline.dto';
-
-// Postgres error code for a row still referenced by a foreign key
-const FOREIGN_KEY_VIOLATION = '23503';
+import {
+  isForeignKeyViolation,
+  isUniqueViolation,
+} from '../shared/common/database.errors';
 
 @Injectable()
 export class AirlinesService {
@@ -18,10 +19,21 @@ export class AirlinesService {
     private readonly airlineRepository: Repository<Airline>,
   ) {}
 
+  // Upserts by id, so saving an airline with its own code is allowed
   async create(airlineDto: AirlineDto): Promise<void> {
+    await this.assertCodeIsFree(airlineDto.code, airlineDto.id);
+
     const airline = this.airlineRepository.create(airlineDto);
 
-    await this.airlineRepository.save(airline);
+    try {
+      await this.airlineRepository.save(airline);
+    } catch (error) {
+      // Another request may take the code between the check and the save
+      if (isUniqueViolation(error)) {
+        throw this.codeTaken(airlineDto.code);
+      }
+      throw error;
+    }
   }
 
   async findAll(): Promise<Airline[]> {
@@ -43,7 +55,7 @@ export class AirlinesService {
     try {
       await this.airlineRepository.delete(id);
     } catch (error) {
-      if (this.isForeignKeyViolation(error)) {
+      if (isForeignKeyViolation(error)) {
         throw new ConflictException(
           `Airline ${id} has flights and cannot be deleted`,
         );
@@ -52,12 +64,14 @@ export class AirlinesService {
     }
   }
 
-  private isForeignKeyViolation(error: unknown): boolean {
-    if (!(error instanceof QueryFailedError)) {
-      return false;
+  private async assertCodeIsFree(code: string, id: string): Promise<void> {
+    const taken = await this.airlineRepository.existsBy({ code, id: Not(id) });
+    if (taken) {
+      throw this.codeTaken(code);
     }
+  }
 
-    const driverError = error.driverError as { code?: string } | undefined;
-    return driverError?.code === FOREIGN_KEY_VIOLATION;
+  private codeTaken(code: string): ConflictException {
+    return new ConflictException(`An airline with code ${code} already exists`);
   }
 }

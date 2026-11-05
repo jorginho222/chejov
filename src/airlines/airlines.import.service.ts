@@ -1,5 +1,9 @@
 import { randomUUID } from 'crypto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validate, ValidationError } from 'class-validator';
@@ -10,6 +14,7 @@ import { AirlineDto } from './dto/airline.dto';
 import { ImportAirlinesResultDto } from './dto/import.airlines.result.dto';
 import { FlightClasses } from '../flights/types/flight.classes';
 import { AirlineImportRowError } from './types/airline.import.row.error';
+import { isUniqueViolation } from '../shared/common/database.errors';
 
 const LUGGAGE_COLUMNS = [
   'priceHandBaggage',
@@ -65,9 +70,19 @@ export class AirlinesImportService {
     }
 
     // save() runs in a single transaction when given an array
-    await this.airlineRepository.save(
-      this.airlineRepository.create(rows.map((row) => row.airline)),
-    );
+    try {
+      await this.airlineRepository.save(
+        this.airlineRepository.create(rows.map((row) => row.airline)),
+      );
+    } catch (error) {
+      // Another request may store one of these codes after the checks above
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(
+          'An airline code in the file was stored by another request, so nothing was imported',
+        );
+      }
+      throw error;
+    }
 
     return { imported: rows.length };
   }

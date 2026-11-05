@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import * as request from 'supertest';
@@ -28,7 +28,7 @@ const buildAirline = (id: string, name: string, code: string): Airline => {
   return airline;
 };
 
-describe('Airlines GET and DELETE', () => {
+describe('Airlines endpoints', () => {
   let app: INestApplication<App>;
   let repository: Repository<Airline>;
 
@@ -57,6 +57,8 @@ describe('Airlines GET and DELETE', () => {
     }).compile();
 
     app = module.createNestApplication();
+    // Same as main.ts, so the DTO's transforms and validations run
+    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
     repository = module.get(getRepositoryToken(Airline));
   });
@@ -135,5 +137,80 @@ describe('Airlines GET and DELETE', () => {
     await request(app.getHttpServer())
       .delete('/airlines/not-a-uuid')
       .expect(400);
+  });
+
+  describe('airline code', () => {
+    const NEW_ID = '33333333-3333-4333-8333-333333333333';
+
+    const body = (id: string, code: unknown, name = 'Beta Air'): object => ({
+      id,
+      name,
+      code,
+      luggageRules: {
+        _priceHandBaggage: 25,
+        _maxHandBaggage: 2,
+        _priceCheckedLuggage: 60,
+        _priceExceededWeight: 15.5,
+      },
+      flightClassPriceIncrements: [
+        { class: 'economy', increment: { value: 10 } },
+      ],
+      redeemFee: 35,
+    });
+
+    const post = (payload: object): request.Test =>
+      request(app.getHttpServer()).post('/airlines').send(payload);
+
+    it('stores the code trimmed and uppercase', async () => {
+      await post(body(NEW_ID, ' b2 ')).expect(201);
+
+      const stored = await repository.findOneBy({ id: NEW_ID });
+      expect(stored?.code).toBe('B2');
+    });
+
+    it('lets an upsert keep the airline its own code', async () => {
+      await post(body(alpha.id, 'al', 'Alpha Renamed')).expect(201);
+
+      const stored = await repository.findOneBy({ id: alpha.id });
+      expect(stored).toMatchObject({ name: 'Alpha Renamed', code: 'AL' });
+      expect(await repository.count()).toBe(2);
+    });
+
+    it('returns 409 for a new airline with a code already in use, whatever its case', async () => {
+      const response = await post(body(NEW_ID, 'zu')).expect(409);
+
+      expect(response.body).toMatchObject({
+        message: 'An airline with code ZU already exists',
+      });
+      expect(await repository.count()).toBe(2);
+    });
+
+    it('returns 409 when an upsert changes the code to one already in use', async () => {
+      await post(body(alpha.id, 'ZU')).expect(409);
+
+      const stored = await repository.findOneBy({ id: alpha.id });
+      expect(stored?.code).toBe('AL');
+    });
+
+    it.each([
+      ['too long', 'ABC'],
+      ['too short', 'A'],
+      ['a symbol', 'A-'],
+      ['blank', '  '],
+      ['not a string', 12],
+    ])('returns 400 for a code that is %s', async (_case, code) => {
+      const response = await post(body(NEW_ID, code)).expect(400);
+
+      const { message } = response.body as { message: string[] };
+      expect(message).toContain(
+        'code must be 2 letters or digits, such as LA or U2',
+      );
+    });
+
+    it('has a unique constraint in the database too', async () => {
+      await expect(
+        repository.save(buildAirline(NEW_ID, 'Copy Air', 'ZU')),
+      ).rejects.toThrow(/UNIQUE constraint failed: airline.code/);
+    });
   });
 });

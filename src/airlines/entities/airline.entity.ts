@@ -15,7 +15,9 @@ export class Airline {
   @Column()
   name: string;
 
-  @Column()
+  // TypeORM names the constraint UQ_c7d301a4fa39c05abc095447310, and
+  // ignores a custom name for a single-column unique, so keep it as is
+  @Column({ unique: true })
   code: string;
 
   @Column({
