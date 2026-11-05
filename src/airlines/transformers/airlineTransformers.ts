@@ -2,6 +2,24 @@ import { ValueTransformer } from 'typeorm';
 import { FlightClassPriceIncrements } from '../../flights/valueObjects/flight.class.price.increments';
 import { Percentage } from '../../shared/common/percentage';
 import { LuggageRules } from '../valueObjects/luggageRules';
+import { FlightClasses } from '../../flights/types/flight.classes';
+
+interface StoredPriceIncrement {
+  class: FlightClasses;
+  increment: number;
+}
+
+interface StoredLuggageRules {
+  priceHandBaggage: number;
+  maxHandBaggage: number;
+  priceCheckedLuggage: number;
+  priceExceededWeight: number;
+}
+
+// The value may already be parsed, depending on the driver
+function parseStoredValue<T>(value: string | T): T {
+  return typeof value === 'string' ? (JSON.parse(value) as T) : value;
+}
 
 export const flightClassPriceIncrementsTransformer: ValueTransformer = {
   to: (value: FlightClassPriceIncrements[]): string => {
@@ -15,9 +33,10 @@ export const flightClassPriceIncrementsTransformer: ValueTransformer = {
       }),
     );
   },
-  from: (value: string | any): FlightClassPriceIncrements[] => {
-    // If value is already an object (can happen with some drivers), use it as is
-    const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  from: (
+    value: string | StoredPriceIncrement[],
+  ): FlightClassPriceIncrements[] => {
+    const parsedValue = parseStoredValue(value);
 
     if (!Array.isArray(parsedValue)) {
       return [];
@@ -41,17 +60,17 @@ export const luggageRulesTransformer: ValueTransformer = {
       priceExceededWeight: value.priceExceededWeight,
     });
   },
-  from: (value: string): LuggageRules | null => {
-    const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  from: (value: string | StoredLuggageRules): LuggageRules | null => {
+    const parsedValue = parseStoredValue(value);
 
     if (Object.keys(parsedValue).length === 0) {
       return null;
     }
     return new LuggageRules(
-      parsedValue._priceHandBaggage,
-      parsedValue._maxHandBaggage,
-      parsedValue._priceCheckedLuggage,
-      parsedValue._priceExceededWeight,
+      parsedValue.priceHandBaggage,
+      parsedValue.maxHandBaggage,
+      parsedValue.priceCheckedLuggage,
+      parsedValue.priceExceededWeight,
     );
   },
 };

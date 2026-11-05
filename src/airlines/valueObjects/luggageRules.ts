@@ -1,28 +1,37 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsInt, IsNumber, Min } from 'class-validator';
 
 export class LuggageRules {
   @ApiProperty({
     example: 100,
     description: 'Precio del equipaje de mano',
   })
+  @IsNumber()
+  @Min(0)
   public _priceHandBaggage: number;
 
   @ApiProperty({
     example: 1,
     description: 'Cantidad máxima de equipaje de mano',
   })
+  @IsInt()
+  @Min(0)
   public _maxHandBaggage: number;
 
   @ApiProperty({
     example: 200,
     description: 'Precio del equipaje facturado',
   })
+  @IsNumber()
+  @Min(0)
   public _priceCheckedLuggage: number;
 
   @ApiProperty({
     example: 300,
     description: 'Precio por exceso de peso',
   })
+  @IsNumber()
+  @Min(0)
   public _priceExceededWeight: number;
 
   constructor(

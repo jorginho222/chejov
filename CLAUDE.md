@@ -35,7 +35,8 @@ npm run test:debug                             # Debug tests with the Node inspe
 
 - `docker compose up -d` starts the API (3000, hot reload), Postgres (host port 5433) and Adminer (8082). The host ports for Postgres and Adminer avoid clashes with other local projects. Inside Compose, Postgres is still `db:5432`, so tools running on the host need `DB_PORT=5433`. No containers restart on their own, so start them manually after a reboot.
 - The `docker:*` npm scripts run from the host and act on the API container, which must be running: `npm run docker:install -- lodash`, `npm run docker:npm -- ci`, `npm run docker:exec -- node -v`, `npm run docker:shell`. Anything after `--` goes to the command in the container.
-- `node_modules` lives in the `api_node_modules` named volume, not on the host, and a rebuild does not update it. After dependencies change, such as after a pull, run `npm run docker:npm -- ci`.
+- The API container uses its own `node_modules` in the `api_node_modules` named volume, and a rebuild does not update it. The host needs a separate copy for the IDE, so after dependencies change, such as after a pull, run both `npm ci` and `npm run docker:npm -- ci`.
+- On a fresh clone, run `npm ci` on the host before the first `docker compose up`. Otherwise Docker creates an empty root-owned `node_modules` as its mount point, and host installs fail with `EACCES`. To recover, stop the API, `rmdir node_modules`, then run `npm ci`.
 - Compose reads `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` from `.env` or the shell, defaulting to `chejov` / `postgres` / `postgres`. It sets the API's `DB_*` variables from them, with `DB_HOST=db` and `ENVIRONMENT=development`.
 - The `Dockerfile` has `dev` and `prod` targets. Compose uses `dev`. Build the other with `docker build --target prod .`; it runs `node dist/src/main`.
 - Compose mounts the whole project into the API, so files the container writes, including `dist/`, appear on the host. The image's `node` user is UID 1000, so a host user with a different UID may hit permission errors.
@@ -93,7 +94,10 @@ These parts are incomplete, so check before assuming they work:
 - `order.paid` has a subscriber class but nothing emits it, and `AddMilesToUserOnOrderPaid` is not registered in `PassengersModule`.
 - `flight.cancelled` is emitted, but its mail subscriber is not registered in `PassengersModule` and its `@OnEvent` listens to `flight.reserved`.
 - `OrderCancelService.cancel` and `OrderUpsertService.update` are TODO stubs. `order.suspend.service.ts` is a copy of the cancel service, and `SuspendedOrder` is not registered in `ormConfig.ts`.
-- `FlightsReserveService` opens a `queryRunner` transaction but saves through the injected repositories and never commits, so those saves are not covered by the transaction.
+- `FlightsReserveService` locks the flight row (`pessimistic_write`), which SQLite doesn't support, so tests that really reserve a seat need Postgres.
+- `FlightsUpsertService.updateStatus` and `updateSchedule` save the whole flight without that lock, so a reservation landing between their read and save is overwritten by their stale `seats`.
+- Cancelling a seat leaves the passenger in `flight_passengers`.
+- The airline transformers return JSON strings for `json` columns, so values are stored double-encoded as a JSON string and can't be queried with Postgres JSON operators.
 - Many services throw plain `Error` for not-found cases, which surfaces as HTTP 500 rather than 404.
 
 ## Deployment
