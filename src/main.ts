@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ormConfig } from '../ormConfig';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as appInsights from 'applicationinsights';
+import { CORS_METHODS, parseCorsOrigins } from './shared/common/cors';
 
 // important: keep this app insights config at the top
 if (process.env.APPLICATION_INSIGHTS_CONNECTION_STRING) {
@@ -22,9 +23,9 @@ if (process.env.APPLICATION_INSIGHTS_CONNECTION_STRING) {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // The cors package's default methods leave out QUERY, used by flight search
   app.enableCors({
-    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'QUERY'],
+    origin: parseCorsOrigins(process.env.CORS_ORIGINS),
+    methods: CORS_METHODS,
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));

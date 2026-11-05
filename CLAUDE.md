@@ -46,7 +46,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - `ENVIRONMENT=development` controls the database mode:
   - **Development:** TypeORM `synchronize: true`, no SSL, migrations are not run.
   - **Anything else, including unset:** no synchronize, SSL on, and `main.ts` runs pending migrations at boot.
-- CORS is enabled in `main.ts` for all origins. A new HTTP method must be added to its `methods` list, or browsers will block it at preflight.
+- CORS only allows the origins in `CORS_ORIGINS` (comma-separated, defaulting to `http://localhost:4200`, the frontend in `../flights-management-front`). The parsing and method list live in `src/shared/common/cors.ts`. A new HTTP method must be added to `CORS_METHODS`, or browsers will block it at preflight.
 - Swagger UI is served at `/docs`. The bundled UI doesn't render HTTP `QUERY` operations, so `QUERY /flights` is missing from the page, though it is in the `/docs-json` document.
 
 ## Migrations
