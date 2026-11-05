@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Flight } from './entities/flight.entity';
 import { CreateFlightDto } from './dto/create.flight.dto';
 import { AirplanesService } from '../airplanes/airplanes.service';
@@ -20,6 +20,7 @@ export class FlightsUpsertService {
     private readonly airlineRepository: Repository<Airline>,
     private readonly flightSearchService: FlightsSearchService,
     private readonly airplaneService: AirplanesService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(flightDto: CreateFlightDto) {
@@ -66,32 +67,34 @@ export class FlightsUpsertService {
   }
 
   async updateSchedule(flightDto: UpdateFlightScheduleDto) {
-    const flightSearch = await this.flightSearchService.search({
-      where: {
-        id: flightDto.id,
-      },
+    return await this.updateLockedFlight(flightDto.id, (flight) => {
+      flight.setSchedule(flightDto.departure, flightDto.arrival);
     });
-
-    if (flightSearch.length === 0) throw new Error('Flight not found');
-    const flight = flightSearch[0];
-
-    flight.setSchedule(flightDto.departure, flightDto.arrival);
-
-    return await this.flightRepository.save(flight);
   }
 
   async updateStatus(flightDto: UpdateFlightStatusDto) {
-    const flightSearch = await this.flightSearchService.search({
-      where: {
-        id: flightDto.id,
-      },
+    return await this.updateLockedFlight(flightDto.id, (flight) => {
+      flight.setStatus(flightDto.status as FlightStatus);
     });
+  }
 
-    if (flightSearch.length === 0) throw new Error('Flight not found');
-    const flight = flightSearch[0];
+  // Saving writes back every column that differs from the database, including
+  // seats. Without the lock, a reservation made between the read and the save
+  // would be overwritten by the stale seats.
+  private async updateLockedFlight(
+    flightId: string,
+    applyChange: (flight: Flight) => void,
+  ): Promise<Flight> {
+    return await this.dataSource.transaction(async (manager) => {
+      const flight = await manager.findOne(Flight, {
+        where: { id: flightId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!flight) throw new Error('Flight not found');
 
-    flight.setStatus(flightDto.status as FlightStatus);
+      applyChange(flight);
 
-    return await this.flightRepository.save(flight);
+      return await manager.save(flight);
+    });
   }
 }
