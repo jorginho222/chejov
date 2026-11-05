@@ -37,7 +37,7 @@ async function bootstrap() {
   }
 
   const config = new DocumentBuilder()
-    .setTitle('Chejov API')
+    .setTitle('Flights Management API')
     .setDescription('API para la gestión de vuelos, aviones y pasajeros')
     .setVersion('1.0')
     .addTag('flights') // Puedes organizar por etiquetas

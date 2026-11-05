@@ -21,6 +21,8 @@ npm run test:e2e                               # Tests under test/ only (see Tes
 npm run test:debug                             # Debug tests with the Node inspector
 ```
 
+**Do not run `npm run build` for now.** This also applies to the `npm run build && npm run migration:run` command under Migrations, so ask before running it.
+
 ## Conventions
 
 - **File names:** dot-separated and lowercase (`flights.reserve.service.ts`, `create.flight.dto.ts`), with kebab-case module directories.
@@ -37,7 +39,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - The `docker:*` npm scripts run from the host and act on the API container, which must be running: `npm run docker:install -- lodash`, `npm run docker:npm -- ci`, `npm run docker:exec -- node -v`, `npm run docker:shell`. Anything after `--` goes to the command in the container.
 - The API container uses its own `node_modules` in the `api_node_modules` named volume, and a rebuild does not update it. The host needs a separate copy for the IDE, so after dependencies change, such as after a pull, run both `npm ci` and `npm run docker:npm -- ci`.
 - On a fresh clone, run `npm ci` on the host before the first `docker compose up`. Otherwise Docker creates an empty root-owned `node_modules` as its mount point, and host installs fail with `EACCES`. To recover, stop the API, `rmdir node_modules`, then run `npm ci`.
-- Compose reads `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` from `.env` or the shell, defaulting to `chejov` / `postgres` / `postgres`. It sets the API's `DB_*` variables from them, with `DB_HOST=db` and `ENVIRONMENT=development`.
+- Compose reads `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` from `.env` or the shell, defaulting to `flights_management` / `postgres` / `postgres`. It sets the API's `DB_*` variables from them, with `DB_HOST=db` and `ENVIRONMENT=development`.
 - The `Dockerfile` has `dev` and `prod` targets. Compose uses `dev`. Build the other with `docker build --target prod .`; it runs `node dist/src/main`.
 - Compose mounts the whole project into the API, so files the container writes, including `dist/`, appear on the host. The image's `node` user is UID 1000, so a host user with a different UID may hit permission errors.
 - App config comes from `.env` (gitignored; copy it from `.env.example`), with optional overrides in `.env.local`. `ormConfig.ts` loads both with dotenv, and `ConfigModule` loads them again for injected config such as `AWS_S3_*`. Variables set in Compose's `environment` block take priority over both files.
@@ -106,4 +108,6 @@ These parts are incomplete, so check before assuming they work:
 
 ## Deployment
 
-Pushing to `main` triggers `.github/workflows/main_chejov.yml`, which builds on Node 24 and deploys to the Azure Web App `chejov`. The workflow does not run tests or lint. Application Insights is enabled when `APPLICATION_INSIGHTS_CONNECTION_STRING` is set, and its setup must stay above the app bootstrap in `main.ts`.
+**The Azure deployment is not in use.** The workflow below is still in the repo, but don't rely on it or treat Azure as a deployment target.
+
+Pushing to `main` triggers `.github/workflows/main_flights-management.yml`, which builds on Node 24 and deploys to the Azure Web App `flights-management`. The workflow does not run tests or lint. Application Insights is enabled when `APPLICATION_INSIGHTS_CONNECTION_STRING` is set, and its setup must stay above the app bootstrap in `main.ts`.
