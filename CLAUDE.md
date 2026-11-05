@@ -21,6 +21,8 @@ npm run test:e2e                               # Tests under test/ only (see Tes
 npm run test:debug                             # Debug tests with the Node inspector
 ```
 
+**Do not run `npm run build` for now.** This also applies to the `npm run build && npm run migration:run` command under Migrations, so ask before running it.
+
 ## Conventions
 
 - **File names:** dot-separated and lowercase (`flights.reserve.service.ts`, `create.flight.dto.ts`), with kebab-case module directories.
@@ -105,5 +107,7 @@ These parts are incomplete, so check before assuming they work:
 - Many services throw plain `Error` for not-found cases, which surfaces as HTTP 500 rather than 404.
 
 ## Deployment
+
+**The Azure deployment is not in use.** The workflow below is still in the repo, but don't rely on it or treat Azure as a deployment target.
 
 Pushing to `main` triggers `.github/workflows/main_flights-management.yml`, which builds on Node 24 and deploys to the Azure Web App `flights-management`. The workflow does not run tests or lint. Application Insights is enabled when `APPLICATION_INSIGHTS_CONNECTION_STRING` is set, and its setup must stay above the app bootstrap in `main.ts`.
