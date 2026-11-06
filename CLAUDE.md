@@ -29,7 +29,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - **Module layout:** `dto/`, `entities/`, `valueObjects/`, `types/`, `events/` and `subscribers/` as needed, with specs next to the source they cover.
 - **Import order:** external packages, then entities, then services, DTOs and value objects.
 - **Errors:** use NestJS HTTP exceptions (`BadRequestException`, `NotFoundException`, etc.) for HTTP errors, and plain `Error` for domain validation in entities and value objects.
-- **Entities:** use UUID primary keys, `readonly` for fields that must not change after creation, and validation methods on the entity class.
+- **Entities:** use UUID primary keys, `readonly` for fields that must not change after creation, and validation methods on the entity class. `User` extends `Passenger`, so an entity that `Passenger` loads, directly or through other entities, must not import `User` at runtime. `Order` references it by name (`@ManyToOne('User')`) with `import type` and `Relation<User>`.
 - **DTOs:** validate with class-validator and parse with class-transformer, using separate DTOs for create, update and response.
 - **TypeScript:** only `strictNullChecks` is on, not full strict mode, and `noImplicitAny` is off. Avoid `any` anyway, and give public methods explicit return types.
 

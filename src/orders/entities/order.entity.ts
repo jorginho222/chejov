@@ -4,11 +4,12 @@ import {
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm';
 import { Flight } from '../../flights/entities/flight.entity';
 import { OrderLuggage } from '../valueObjects/order.luggage';
 import { FlightClasses } from '../../flights/types/flight.classes';
-import { User } from '../../users/entities/user.entity';
+import type { User } from '../../users/entities/user.entity';
 import { FlightSelectionDto } from '../dto/flightSelectionDto';
 import { CreateOrderDto } from '../dto/create.order.dto';
 import { OrderStatus } from '../types/order.status';
@@ -37,8 +38,11 @@ export class Order {
   @Column()
   class: FlightClasses;
 
-  @ManyToOne(() => User)
-  user: User;
+  // Referenced by name with a type-only import: importing User at runtime
+  // closes the cycle passenger -> flight -> order -> user, and User extends
+  // Passenger, so it would load before Passenger is defined.
+  @ManyToOne('User')
+  user: Relation<User>;
 
   @Column()
   passengersQuantity: number;
