@@ -108,6 +108,7 @@ These parts are incomplete, so check before assuming they work:
 - `order.paid` has a subscriber class but nothing emits it, and `AddMilesToUserOnOrderPaid` is not registered in `PassengersModule`.
 - `flight.cancelled` is emitted, but its mail subscriber is not registered in `PassengersModule` and its `@OnEvent` listens to `flight.reserved`.
 - `OrderCancelService.cancel` and `OrderUpsertService.update` are TODO stubs. `order.suspend.service.ts` is a copy of the cancel service, and `SuspendedOrder` is not registered in `ormConfig.ts`.
+- There are no concurrency tests yet. `src/flights/flights.concurrency.e2e.spec.ts` lists them as `it.todo`, waiting on a Postgres test database.
 - Cancelling a seat leaves the passenger in `flight_passengers`.
 - The airline transformers return JSON strings for `json` columns, so values are stored double-encoded as a JSON string and can't be queried with Postgres JSON operators.
 - Many services throw plain `Error` for not-found cases, which surfaces as HTTP 500 rather than 404.
