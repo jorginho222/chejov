@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -17,6 +18,10 @@ import { Order } from '../../orders/entities/order.entity';
 import { moneyColumn } from '../../shared/common/money';
 
 @Entity()
+// Unique on the code's prefix and correlative. TypeORM can't declare an index
+// on JSON fields, so the 1794000000000-flightCodeUnique migration creates it,
+// and synchronize: false stops dev synchronize from dropping it.
+@Index('UQ_flight_code', { synchronize: false })
 export class Flight {
   @PrimaryGeneratedColumn('uuid')
   readonly id: string;

@@ -21,7 +21,7 @@ npm run test:e2e                               # Tests under test/ only (see Tes
 npm run test:debug                             # Debug tests with the Node inspector
 ```
 
-**Do not run `npm run build` for now.** This also applies to the `npm run build && npm run migration:run` command under Migrations, so ask before running it.
+**Do not run `npm run build`.** Run `npm run migration:run` on its own instead (see Migrations).
 
 ## Conventions
 
@@ -44,7 +44,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - Compose mounts the whole project into the API, so files the container writes, including `dist/`, appear on the host. The image's `node` user is UID 1000, so a host user with a different UID may hit permission errors.
 - App config comes from `.env` (gitignored; copy it from `.env.example`), with optional overrides in `.env.local`. `ormConfig.ts` loads both with dotenv, and `ConfigModule` loads them again for injected config such as `AWS_S3_*`. Variables set in Compose's `environment` block take priority over both files.
 - `ENVIRONMENT=development` controls the database mode:
-  - **Development:** TypeORM `synchronize: true`, no SSL, migrations are not run.
+  - **Development:** TypeORM `synchronize: true`, no SSL, and migrations don't run at boot (run them with `npm run migration:run`).
   - **Anything else, including unset:** no synchronize, SSL on, and `main.ts` runs pending migrations at boot.
 - CORS only allows the origins in `CORS_ORIGINS` (comma-separated, defaulting to `http://localhost:4200`, the frontend in `../flights-management-front`). The parsing and method list live in `src/shared/common/cors.ts`. A new HTTP method must be added to `CORS_METHODS`, or browsers will block it at preflight.
 - Swagger UI is served at `/docs`. The bundled UI doesn't render HTTP `QUERY` operations, so `QUERY /flights` is missing from the page, though it is in the `/docs-json` document.
@@ -52,12 +52,16 @@ npm run test:debug                             # Debug tests with the Node inspe
 ## Migrations
 
 ```bash
-npm run build && npm run migration:run     # migrations load from dist/src/migration/*.js, so build first
+npm run migration:run                      # runs from the host against the local database (DB_PORT=5433)
 npm run migration:generate -- src/migration/<Name>
 npm run migration:revert
 ```
 
-Because development relies on `synchronize`, a schema change works locally without a migration. Production needs one, so generate it in `src/migration/` whenever an entity changes. New entities must also be added to the `entities` array in `ormConfig.ts`, which lists them explicitly with no glob.
+The app is not deployed to production, and the migrations run against the local database. They load from `dist/src/migration/*.js`, which the API container's watch mode keeps compiled because Compose mounts the project, so run `migration:run` without building. Make sure the API container is running and has picked up the new migration file first.
+
+The local database was built by `synchronize`, so on 2026-11-06 its `migrations` table was created by hand with the migrations up to `AirplaneModelUnique1793995200000` marked as applied. Later migrations ran through `migration:run`. A fresh database would replay every migration from `InitialSchema`.
+
+Because development relies on `synchronize`, a schema change on an entity works locally without a migration, but still generate one in `src/migration/` whenever an entity changes. Anything `synchronize` can't create needs a hand-written migration and a `synchronize: false` declaration on the entity, so synchronize doesn't drop it. An example is the `UQ_flight_code` expression index on the prefix and correlative inside `Flight.code`. New entities must also be added to the `entities` array in `ormConfig.ts`, which lists them explicitly with no glob.
 
 ## Build output
 
@@ -79,6 +83,7 @@ Because development relies on `synchronize`, a schema change works locally witho
 
 **Value objects are stored as JSON columns:**
 
+- `Flight.code` is unique through the `UQ_flight_code` index. `FlightsUpsertService.create` locks the airline row and takes the highest correlative for the prefix plus one, and a clash with the index returns 409 Conflict.
 - `Flight.seats` is a JSON array of `AirplaneSeat`, generated from `Airplane.seatsConfig` by `Flight.setSeats()`. A reservation sets `passengerId` on a seat in that array and also adds to the `flight_passengers` relation, so the two must stay in sync.
 - `Airline.luggageRules` and `flightClassPriceIncrements` use custom transformers in `src/airlines/transformers/` to rebuild class instances. Other JSON columns, such as `Flight.code` and `Order.luggage`, come back from the database as plain objects with no methods.
 
