@@ -9,12 +9,16 @@ import { FlightsSearchService } from './flights.search.service';
 import { FlightStatus } from './types/flight.status';
 import { UpdateFlightScheduleDto } from './dto/update.flight.schedule.dto';
 import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
+import { CreateFlightDto } from './dto/create.flight.dto';
+import { Airplane } from '../airplanes/entities/airplane.entity';
+import { FlightClasses } from './types/flight.classes';
 
 describe('FlightsUpsertService', () => {
   let service: FlightsUpsertService;
   let manager: { findOne: jest.Mock; save: jest.Mock };
   let transaction: jest.Mock;
   let repositorySave: jest.Mock;
+  let airplaneSearch: jest.Mock;
   let flight: Flight;
 
   const flightId = 'flight-id';
@@ -46,18 +50,28 @@ describe('FlightsUpsertService', () => {
     transaction = jest.fn((work: (m: typeof manager) => Promise<Flight>) =>
       work(manager),
     );
-    repositorySave = jest.fn();
+    repositorySave = jest.fn((saved: Flight) => Promise.resolve(saved));
+    airplaneSearch = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FlightsUpsertService,
         {
           provide: getRepositoryToken(Flight),
-          useValue: { save: repositorySave },
+          useValue: {
+            save: repositorySave,
+            create: (value: Partial<Flight>) =>
+              Object.assign(new Flight(), value),
+          },
         },
-        { provide: getRepositoryToken(Airline), useValue: {} },
+        {
+          provide: getRepositoryToken(Airline),
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ id: 'airline-id' }),
+          },
+        },
         { provide: FlightsSearchService, useValue: {} },
-        { provide: AirplanesService, useValue: {} },
+        { provide: AirplanesService, useValue: { search: airplaneSearch } },
         { provide: DataSource, useValue: { transaction } },
       ],
     }).compile();
@@ -74,6 +88,38 @@ describe('FlightsUpsertService', () => {
     expect(manager.save).toHaveBeenCalledWith(flight);
     expect(repositorySave).not.toHaveBeenCalled();
   };
+
+  describe('create', () => {
+    const createDto = {
+      id: flightId,
+      airline: { id: 'airline-id', code: 'AL' },
+      airplane: { id: 'airplane-id' },
+      origin: 'Buenos Aires',
+      destination: 'Córdoba',
+      distance: 650,
+      departure,
+      arrival,
+      basePrice: 100,
+    } as CreateFlightDto;
+
+    const airplaneWith = (passengersCapacity: number): Airplane =>
+      Object.assign(new Airplane(), {
+        id: 'airplane-id',
+        passengersCapacity,
+        seatsConfig: [
+          { class: FlightClasses.Economy, rowsQuantity: 2, columnsQuantity: 3 },
+        ],
+      });
+
+    it('builds the seats from the airplane seat config', async () => {
+      airplaneSearch.mockResolvedValue([airplaneWith(6)]);
+
+      const created = await service.create(createDto);
+
+      expect(created.seats).toHaveLength(6);
+      expect(repositorySave).toHaveBeenCalledTimes(1);
+    });
+  });
 
   describe('updateStatus', () => {
     it('locks the flight, then saves the new status in one transaction', async () => {

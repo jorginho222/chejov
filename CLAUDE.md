@@ -92,6 +92,8 @@ Money columns use `moneyColumn` from `src/shared/common/money.ts` (`numeric(12,2
 
 **Flight search uses HTTP `QUERY /flights`** with a JSON `SearchFlightsDto` body, and there is no `GET /flights`. The route decorator is `@QueryMethod()`, which needs a newer Nest than 11.0.7 (the project is on 11.2.8); `@Query()` is still the query-string param decorator. In specs, supertest's types need a cast to call it as a method (see `flights.query.e2e.spec.ts`), and with curl use `-X QUERY`.
 
+**Spreadsheet imports share `SpreadsheetImporter`** (`src/shared/import/`). `POST /airlines/import` and `POST /airplanes/import` take an .xlsx in the `file` field, find columns by header, validate each row with the module's DTO and save all or nothing. A new import extends the base class (columns, `buildDto`, `toColumnName`, `findConflicts`, `save`) and uses the `@SpreadsheetUpload()` decorator. Sample files live in `data/`.
+
 **Cross-module side effects use `@nestjs/event-emitter`.** Event classes live in the emitting module's `events/` directory, and handlers live in `subscribers/` (currently all under `passengers/`). A subscriber only runs if it is listed in its module's `providers`.
 
 ## Work in progress
