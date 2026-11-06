@@ -11,6 +11,7 @@ import { Airplane } from '../../airplanes/entities/airplane.entity';
 import { Passenger } from '../../passengers/entities/passenger.entity';
 import { FlightStatus } from '../types/flight.status';
 import { FlightCode } from '../valueObjects/flight.code';
+import { flightCodeTransformer } from '../transformers/flight.code.transformer';
 import { AirplaneSeat } from '../valueObjects/airplane.seat';
 import { BadRequestException } from '@nestjs/common';
 import { Airline } from '../../airlines/entities/airline.entity';
@@ -26,7 +27,7 @@ export class Flight {
   @PrimaryGeneratedColumn('uuid')
   readonly id: string;
 
-  @Column('json')
+  @Column('json', { transformer: flightCodeTransformer })
   readonly code: FlightCode;
 
   @Column()

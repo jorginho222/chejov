@@ -85,7 +85,7 @@ Because development relies on `synchronize`, a schema change on an entity works 
 
 - `Flight.code` is unique through the `UQ_flight_code` index. `FlightsUpsertService.create` locks the airline row and takes the highest correlative for the prefix plus one, and a clash with the index returns 409 Conflict.
 - `Flight.seats` is a JSON array of `AirplaneSeat`, generated from `Airplane.seatsConfig` by `Flight.setSeats()`. A reservation sets `passengerId` on a seat in that array and also adds to the `flight_passengers` relation, so the two must stay in sync.
-- `Airline.luggageRules` and `flightClassPriceIncrements` use custom transformers in `src/airlines/transformers/` to rebuild class instances. Other JSON columns, such as `Flight.code` and `Order.luggage`, come back from the database as plain objects with no methods.
+- `Airline.luggageRules` and `flightClassPriceIncrements` use custom transformers in `src/airlines/transformers/` to rebuild class instances. `Flight.code` does the same with `flightCodeTransformer` in `src/flights/transformers/`, which stores a plain object rather than a JSON string. Other JSON columns, such as `Flight.seats` and `Order.luggage`, come back from the database as plain objects with no methods.
 
 **Order pricing** (`Order.calculateTotal`) combines three parts into `grandTotal`:
 
