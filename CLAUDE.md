@@ -32,6 +32,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - **Entities:** use UUID primary keys, `readonly` for fields that must not change after creation, and validation methods on the entity class. `User` extends `Passenger`, so an entity that `Passenger` loads, directly or through other entities, must not import `User` at runtime. `Order` references it by name (`@ManyToOne('User')`) with `import type` and `Relation<User>`.
 - **DTOs:** validate with class-validator and parse with class-transformer, using separate DTOs for create, update and response.
 - **TypeScript:** only `strictNullChecks` is on, not full strict mode, and `noImplicitAny` is off. Avoid `any` anyway, and give public methods explicit return types.
+- **README:** `README.md` is the project documentation for people new to the repo. When a change affects something it describes, update it in the same change. That includes endpoints, setup, configuration variables, commands, domain rules such as pricing or flight codes, testing and the work-in-progress list.
 
 ## Local setup and database
 
