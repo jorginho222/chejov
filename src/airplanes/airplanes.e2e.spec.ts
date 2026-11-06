@@ -14,6 +14,7 @@ import { AirplanesModule } from './airplanes.module';
 import { S3Service } from '../shared/s3/s3.service';
 import { FlightClasses } from '../flights/types/flight.classes';
 import { FlightStatus } from '../flights/types/flight.status';
+import { FlightCode } from '../flights/valueObjects/flight.code';
 import { LuggageRules } from '../airlines/valueObjects/luggageRules';
 import { CreateAirplaneDto } from './dto/create.airplane.dto';
 
@@ -54,7 +55,7 @@ describe('Airplanes endpoints', () => {
     airline?: Airline,
   ): Promise<void> => {
     await flights.save({
-      code: { prefix: 'AL', correlative: 1234 },
+      code: new FlightCode('AL', 1234),
       origin: 'Buenos Aires',
       destination: 'Córdoba',
       distance: 650,

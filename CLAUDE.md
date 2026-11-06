@@ -72,8 +72,8 @@ Because development relies on `synchronize`, a schema change on an entity works 
 - Unit tests use the `@nestjs/testing` `Test` module, with repositories mocked through `getRepositoryToken`.
 - `npm test` matches every `src/**/*.spec.ts`, which includes the `*.e2e.spec.ts` files co-located with their modules.
 - `npm run test:e2e` only matches `test/*.e2e-spec.ts`, so it does not run those co-located specs.
-- Co-located e2e specs use `ormConfigTest.ts` (in-memory SQLite). It registers only `Airplane`, `Flight` and `Passenger`, while `Flight` now has relations to `Airline` and `Order`, so specs that load `Flight` need those entities registered too.
-- Some of these specs are stale. For example, `flights.e2e.spec.ts` builds its DTO with `flightPrices`, while the current flight model uses `basePrice`.
+- Co-located e2e specs that need a database configure their own in-memory SQLite in `TypeOrmModule.forRoot`. `ormConfigTest.ts` is no longer used: `passengers.e2e.spec.ts` only imports it in commented-out code. `Flight` has relations to `Airline` and `Order`, so specs that load `Flight` must register those entities too.
+- SQLite can't run `FlightsUpsertService.create` or `FlightsReserveService`. Both lock rows with `pessimistic_write`, and `create` also uses a Postgres `::int` cast, so tests that really create a flight or reserve a seat need Postgres.
 
 ## Architecture
 
@@ -108,7 +108,6 @@ These parts are incomplete, so check before assuming they work:
 - `order.paid` has a subscriber class but nothing emits it, and `AddMilesToUserOnOrderPaid` is not registered in `PassengersModule`.
 - `flight.cancelled` is emitted, but its mail subscriber is not registered in `PassengersModule` and its `@OnEvent` listens to `flight.reserved`.
 - `OrderCancelService.cancel` and `OrderUpsertService.update` are TODO stubs. `order.suspend.service.ts` is a copy of the cancel service, and `SuspendedOrder` is not registered in `ormConfig.ts`.
-- `FlightsReserveService` locks the flight row (`pessimistic_write`), which SQLite doesn't support, so tests that really reserve a seat need Postgres.
 - Cancelling a seat leaves the passenger in `flight_passengers`.
 - The airline transformers return JSON strings for `json` columns, so values are stored double-encoded as a JSON string and can't be queried with Postgres JSON operators.
 - Many services throw plain `Error` for not-found cases, which surfaces as HTTP 500 rather than 404.
