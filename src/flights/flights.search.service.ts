@@ -7,7 +7,6 @@ import {
   FindOptionsWhere,
   LessThanOrEqual,
   MoreThanOrEqual,
-  Raw,
   Repository,
 } from 'typeorm';
 import { Flight } from './entities/flight.entity';
@@ -38,24 +37,6 @@ export class FlightsSearchService {
       skip: (page - 1) * limit,
       take: limit,
     });
-  }
-
-  async getLastCodeCorrelative(prefixSearch: string): Promise<number | null> {
-    const searchLastCriteria: FindManyOptions<Flight> = {
-      where: {
-        code: Raw((columnAlias) => `${columnAlias}->>'prefix' = :prefix`, {
-          prefix: prefixSearch,
-        }),
-      },
-      order: {
-        code: 'DESC',
-      },
-      take: 1,
-    };
-    const lastFlightSearch: Flight[] = await this.search(searchLastCriteria);
-    if (lastFlightSearch.length === 0) return null;
-
-    return lastFlightSearch[0].code.getCorrelative();
   }
 
   private buildSearchWhere(

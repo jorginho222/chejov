@@ -1,11 +1,10 @@
+import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryFailedError } from 'typeorm';
 import { FlightsUpsertService } from './flights.upsert.service';
 import { Flight } from './entities/flight.entity';
 import { Airline } from '../airlines/entities/airline.entity';
 import { AirplanesService } from '../airplanes/airplanes.service';
-import { FlightsSearchService } from './flights.search.service';
 import { FlightStatus } from './types/flight.status';
 import { UpdateFlightScheduleDto } from './dto/update.flight.schedule.dto';
 import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
@@ -13,11 +12,25 @@ import { CreateFlightDto } from './dto/create.flight.dto';
 import { Airplane } from '../airplanes/entities/airplane.entity';
 import { FlightClasses } from './types/flight.classes';
 
+const uniqueViolation = (constraint: string): QueryFailedError =>
+  new QueryFailedError('query', [], {
+    name: 'error',
+    message: 'duplicate key value violates unique constraint',
+    code: '23505',
+    constraint,
+  } as Error);
+
 describe('FlightsUpsertService', () => {
   let service: FlightsUpsertService;
-  let manager: { findOne: jest.Mock; save: jest.Mock };
+  let manager: {
+    findOne: jest.Mock;
+    save: jest.Mock;
+    create: jest.Mock;
+    createQueryBuilder: jest.Mock;
+  };
+  let lastCorrelative: { last: number | null } | undefined;
+  let queryBuilder: Record<string, jest.Mock>;
   let transaction: jest.Mock;
-  let repositorySave: jest.Mock;
   let airplaneSearch: jest.Mock;
   let flight: Flight;
 
@@ -43,34 +56,28 @@ describe('FlightsUpsertService', () => {
     flight.departure = departure;
     flight.arrival = arrival;
 
+    lastCorrelative = { last: null };
+    queryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn(() => Promise.resolve(lastCorrelative)),
+    };
     manager = {
       findOne: jest.fn().mockResolvedValue(flight),
       save: jest.fn((saved: Flight) => Promise.resolve(saved)),
+      create: jest.fn((_entity: unknown, value: Partial<Flight>) =>
+        Object.assign(new Flight(), value),
+      ),
+      createQueryBuilder: jest.fn(() => queryBuilder),
     };
     transaction = jest.fn((work: (m: typeof manager) => Promise<Flight>) =>
       work(manager),
     );
-    repositorySave = jest.fn((saved: Flight) => Promise.resolve(saved));
     airplaneSearch = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FlightsUpsertService,
-        {
-          provide: getRepositoryToken(Flight),
-          useValue: {
-            save: repositorySave,
-            create: (value: Partial<Flight>) =>
-              Object.assign(new Flight(), value),
-          },
-        },
-        {
-          provide: getRepositoryToken(Airline),
-          useValue: {
-            findOne: jest.fn().mockResolvedValue({ id: 'airline-id' }),
-          },
-        },
-        { provide: FlightsSearchService, useValue: {} },
         { provide: AirplanesService, useValue: { search: airplaneSearch } },
         { provide: DataSource, useValue: { transaction } },
       ],
@@ -86,7 +93,6 @@ describe('FlightsUpsertService', () => {
       lock: { mode: 'pessimistic_write' },
     });
     expect(manager.save).toHaveBeenCalledWith(flight);
-    expect(repositorySave).not.toHaveBeenCalled();
   };
 
   describe('create', () => {
@@ -111,13 +117,86 @@ describe('FlightsUpsertService', () => {
         ],
       });
 
-    it('builds the seats from the airplane seat config', async () => {
-      airplaneSearch.mockResolvedValue([airplaneWith(6)]);
+    const airline = Object.assign(new Airline(), {
+      id: 'airline-id',
+      code: 'AL',
+    });
 
+    beforeEach(() => {
+      airplaneSearch.mockResolvedValue([airplaneWith(6)]);
+      manager.findOne.mockResolvedValue(airline);
+    });
+
+    it('builds the seats from the airplane seat config', async () => {
       const created = await service.create(createDto);
 
       expect(created.seats).toHaveLength(6);
-      expect(repositorySave).toHaveBeenCalledTimes(1);
+      expect(manager.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('locks the airline and saves the flight in one transaction', async () => {
+      await service.create(createDto);
+
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(manager.findOne).toHaveBeenCalledWith(Airline, {
+        where: { id: 'airline-id' },
+        lock: { mode: 'pessimistic_write' },
+      });
+      expect(manager.findOne.mock.invocationCallOrder[0]).toBeLessThan(
+        queryBuilder.getRawOne.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('starts the correlative at 1 for an airline without flights', async () => {
+      const created = await service.create(createDto);
+
+      expect(created.code.toString()).toBe('AL1');
+      expect(queryBuilder.where).toHaveBeenCalledWith(expect.any(String), {
+        prefix: 'AL',
+      });
+    });
+
+    it('uses the next correlative after the last one', async () => {
+      lastCorrelative = { last: 41 };
+
+      const created = await service.create(createDto);
+
+      expect(created.code.getCorrelative()).toBe(42);
+    });
+
+    it('takes the prefix from the stored airline, not the request', async () => {
+      const created = await service.create({
+        ...createDto,
+        airline: { ...createDto.airline, code: 'ZZ' },
+      } as CreateFlightDto);
+
+      expect(created.code.getPrefix()).toBe('AL');
+    });
+
+    it('does not save when the airline does not exist', async () => {
+      manager.findOne.mockResolvedValue(null);
+
+      await expect(service.create(createDto)).rejects.toThrow(
+        'Airline not found',
+      );
+
+      expect(manager.save).not.toHaveBeenCalled();
+    });
+
+    it('returns a conflict when the flight code is already taken', async () => {
+      manager.save.mockRejectedValue(uniqueViolation('UQ_flight_code'));
+
+      const result = service.create(createDto);
+
+      await expect(result).rejects.toThrow(ConflictException);
+      await expect(result).rejects.toThrow('Flight code AL1 is already taken');
+    });
+
+    it('rethrows unique violations on other constraints', async () => {
+      const error = uniqueViolation('PK_flight');
+      manager.save.mockRejectedValue(error);
+
+      await expect(service.create(createDto)).rejects.toBe(error);
     });
   });
 

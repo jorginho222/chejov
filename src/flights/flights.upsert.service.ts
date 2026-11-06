@@ -1,35 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { DataSource, EntityManager } from 'typeorm';
 import { Flight } from './entities/flight.entity';
+import { Airline } from '../airlines/entities/airline.entity';
 import { CreateFlightDto } from './dto/create.flight.dto';
 import { AirplanesService } from '../airplanes/airplanes.service';
 import { FlightStatus } from './types/flight.status';
 import { FlightCode } from './valueObjects/flight.code';
 import { UpdateFlightScheduleDto } from './dto/update.flight.schedule.dto';
-import { FlightsSearchService } from './flights.search.service';
 import { UpdateFlightStatusDto } from './dto/update.flight.status.dto';
-import { Airline } from '../airlines/entities/airline.entity';
+import { isUniqueViolation } from '../shared/common/database.errors';
 
 @Injectable()
 export class FlightsUpsertService {
   constructor(
-    @InjectRepository(Flight)
-    private readonly flightRepository: Repository<Flight>,
-    @InjectRepository(Airline)
-    private readonly airlineRepository: Repository<Airline>,
-    private readonly flightSearchService: FlightsSearchService,
     private readonly airplaneService: AirplanesService,
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(flightDto: CreateFlightDto) {
-    // const lastCorrelative =
-    //   await this.flightSearchService.getLastCodeCorrelative(
-    //     flightDto.airline.code,
-    //   );
-    const currentCode = new FlightCode(flightDto.airline.code, 1);
-
+  async create(flightDto: CreateFlightDto): Promise<Flight> {
     const airplaneSearch = await this.airplaneService.search({
       where: {
         id: flightDto.airplane.id,
@@ -37,33 +25,52 @@ export class FlightsUpsertService {
     });
     if (airplaneSearch.length === 0) throw new Error('Airplane not found');
 
-    const airlineSearch = await this.airlineRepository.findOne({
-      where: {
-        id: flightDto.airline.id,
-      },
+    return await this.dataSource.transaction(async (manager) => {
+      // Locking the airline makes concurrent creations for the same airline
+      // wait here, so two flights can't read the same last correlative.
+      const airline = await manager.findOne(Airline, {
+        where: { id: flightDto.airline.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!airline) throw new Error('Airline not found');
+
+      const lastCorrelative = await this.getLastCodeCorrelative(
+        manager,
+        airline.code,
+      );
+
+      const flight = manager.create(Flight, {
+        id: flightDto.id,
+        code: new FlightCode(airline.code, lastCorrelative + 1),
+        airline,
+        origin: flightDto.origin,
+        destination: flightDto.destination,
+        distance: flightDto.distance,
+        airplane: airplaneSearch[0],
+        departure: flightDto.departure,
+        arrival: flightDto.arrival,
+        passengers: [],
+        orders: [],
+        status: FlightStatus.Scheduled,
+        basePrice: flightDto.basePrice,
+      });
+
+      flight.validate();
+      flight.setSeats();
+
+      try {
+        return await manager.save(flight);
+      } catch (error) {
+        // The airline lock makes this rare, but a flight under another
+        // airline can hold the same prefix, e.g. after an airline code change.
+        if (isUniqueViolation(error, 'UQ_flight_code')) {
+          throw new ConflictException(
+            `Flight code ${flight.code.toString()} is already taken`,
+          );
+        }
+        throw error;
+      }
     });
-    if (!airlineSearch) throw new Error('Airline not found');
-
-    const flight = this.flightRepository.create({
-      id: flightDto.id,
-      code: currentCode,
-      airline: airlineSearch,
-      origin: flightDto.origin,
-      destination: flightDto.destination,
-      distance: flightDto.distance,
-      airplane: airplaneSearch[0],
-      departure: flightDto.departure,
-      arrival: flightDto.arrival,
-      passengers: [],
-      orders: [],
-      status: FlightStatus.Scheduled,
-      basePrice: flightDto.basePrice,
-    });
-
-    flight.validate();
-    flight.setSeats();
-
-    return await this.flightRepository.save(flight);
   }
 
   async updateSchedule(flightDto: UpdateFlightScheduleDto) {
@@ -78,9 +85,19 @@ export class FlightsUpsertService {
     });
   }
 
-  // Saving writes back every column that differs from the database, including
-  // seats. Without the lock, a reservation made between the read and the save
-  // would be overwritten by the stale seats.
+  private async getLastCodeCorrelative(
+    manager: EntityManager,
+    prefix: string,
+  ): Promise<number> {
+    const result = await manager
+      .createQueryBuilder(Flight, 'flight')
+      .select("MAX((flight.code ->> 'correlative')::int)", 'last')
+      .where("flight.code ->> 'prefix' = :prefix", { prefix })
+      .getRawOne<{ last: number | null }>();
+
+    return Number(result?.last ?? 0);
+  }
+
   private async updateLockedFlight(
     flightId: string,
     applyChange: (flight: Flight) => void,

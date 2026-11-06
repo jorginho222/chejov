@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -10,6 +11,7 @@ import { Airplane } from '../../airplanes/entities/airplane.entity';
 import { Passenger } from '../../passengers/entities/passenger.entity';
 import { FlightStatus } from '../types/flight.status';
 import { FlightCode } from '../valueObjects/flight.code';
+import { flightCodeTransformer } from '../transformers/flight.code.transformer';
 import { AirplaneSeat } from '../valueObjects/airplane.seat';
 import { BadRequestException } from '@nestjs/common';
 import { Airline } from '../../airlines/entities/airline.entity';
@@ -17,11 +19,15 @@ import { Order } from '../../orders/entities/order.entity';
 import { moneyColumn } from '../../shared/common/money';
 
 @Entity()
+// Unique on the code's prefix and correlative. TypeORM can't declare an index
+// on JSON fields, so the 1794000000000-flightCodeUnique migration creates it,
+// and synchronize: false stops dev synchronize from dropping it.
+@Index('UQ_flight_code', { synchronize: false })
 export class Flight {
   @PrimaryGeneratedColumn('uuid')
   readonly id: string;
 
-  @Column('json')
+  @Column('json', { transformer: flightCodeTransformer })
   readonly code: FlightCode;
 
   @Column()

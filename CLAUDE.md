@@ -21,7 +21,7 @@ npm run test:e2e                               # Tests under test/ only (see Tes
 npm run test:debug                             # Debug tests with the Node inspector
 ```
 
-**Do not run `npm run build` for now.** This also applies to the `npm run build && npm run migration:run` command under Migrations, so ask before running it.
+**Do not run `npm run build`.** Run `npm run migration:run` on its own instead (see Migrations).
 
 ## Conventions
 
@@ -29,7 +29,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - **Module layout:** `dto/`, `entities/`, `valueObjects/`, `types/`, `events/` and `subscribers/` as needed, with specs next to the source they cover.
 - **Import order:** external packages, then entities, then services, DTOs and value objects.
 - **Errors:** use NestJS HTTP exceptions (`BadRequestException`, `NotFoundException`, etc.) for HTTP errors, and plain `Error` for domain validation in entities and value objects.
-- **Entities:** use UUID primary keys, `readonly` for fields that must not change after creation, and validation methods on the entity class.
+- **Entities:** use UUID primary keys, `readonly` for fields that must not change after creation, and validation methods on the entity class. `User` extends `Passenger`, so an entity that `Passenger` loads, directly or through other entities, must not import `User` at runtime. `Order` references it by name (`@ManyToOne('User')`) with `import type` and `Relation<User>`.
 - **DTOs:** validate with class-validator and parse with class-transformer, using separate DTOs for create, update and response.
 - **TypeScript:** only `strictNullChecks` is on, not full strict mode, and `noImplicitAny` is off. Avoid `any` anyway, and give public methods explicit return types.
 
@@ -44,7 +44,7 @@ npm run test:debug                             # Debug tests with the Node inspe
 - Compose mounts the whole project into the API, so files the container writes, including `dist/`, appear on the host. The image's `node` user is UID 1000, so a host user with a different UID may hit permission errors.
 - App config comes from `.env` (gitignored; copy it from `.env.example`), with optional overrides in `.env.local`. `ormConfig.ts` loads both with dotenv, and `ConfigModule` loads them again for injected config such as `AWS_S3_*`. Variables set in Compose's `environment` block take priority over both files.
 - `ENVIRONMENT=development` controls the database mode:
-  - **Development:** TypeORM `synchronize: true`, no SSL, migrations are not run.
+  - **Development:** TypeORM `synchronize: true`, no SSL, and migrations don't run at boot (run them with `npm run migration:run`).
   - **Anything else, including unset:** no synchronize, SSL on, and `main.ts` runs pending migrations at boot.
 - CORS only allows the origins in `CORS_ORIGINS` (comma-separated, defaulting to `http://localhost:4200`, the frontend in `../flights-management-front`). The parsing and method list live in `src/shared/common/cors.ts`. A new HTTP method must be added to `CORS_METHODS`, or browsers will block it at preflight.
 - Swagger UI is served at `/docs`. The bundled UI doesn't render HTTP `QUERY` operations, so `QUERY /flights` is missing from the page, though it is in the `/docs-json` document.
@@ -52,12 +52,16 @@ npm run test:debug                             # Debug tests with the Node inspe
 ## Migrations
 
 ```bash
-npm run build && npm run migration:run     # migrations load from dist/src/migration/*.js, so build first
+npm run migration:run                      # runs from the host against the local database (DB_PORT=5433)
 npm run migration:generate -- src/migration/<Name>
 npm run migration:revert
 ```
 
-Because development relies on `synchronize`, a schema change works locally without a migration. Production needs one, so generate it in `src/migration/` whenever an entity changes. New entities must also be added to the `entities` array in `ormConfig.ts`, which lists them explicitly with no glob.
+The app is not deployed to production, and the migrations run against the local database. They load from `dist/src/migration/*.js`, which the API container's watch mode keeps compiled because Compose mounts the project, so run `migration:run` without building. Make sure the API container is running and has picked up the new migration file first.
+
+The local database was built by `synchronize`, so on 2026-11-06 its `migrations` table was created by hand with the migrations up to `AirplaneModelUnique1793995200000` marked as applied. Later migrations ran through `migration:run`. A fresh database would replay every migration from `InitialSchema`.
+
+Because development relies on `synchronize`, a schema change on an entity works locally without a migration, but still generate one in `src/migration/` whenever an entity changes. Anything `synchronize` can't create needs a hand-written migration and a `synchronize: false` declaration on the entity, so synchronize doesn't drop it. An example is the `UQ_flight_code` expression index on the prefix and correlative inside `Flight.code`. New entities must also be added to the `entities` array in `ormConfig.ts`, which lists them explicitly with no glob.
 
 ## Build output
 
@@ -68,8 +72,8 @@ Because development relies on `synchronize`, a schema change works locally witho
 - Unit tests use the `@nestjs/testing` `Test` module, with repositories mocked through `getRepositoryToken`.
 - `npm test` matches every `src/**/*.spec.ts`, which includes the `*.e2e.spec.ts` files co-located with their modules.
 - `npm run test:e2e` only matches `test/*.e2e-spec.ts`, so it does not run those co-located specs.
-- Co-located e2e specs use `ormConfigTest.ts` (in-memory SQLite). It registers only `Airplane`, `Flight` and `Passenger`, while `Flight` now has relations to `Airline` and `Order`, so specs that load `Flight` need those entities registered too.
-- Some of these specs are stale. For example, `flights.e2e.spec.ts` builds its DTO with `flightPrices`, while the current flight model uses `basePrice`.
+- Co-located e2e specs that need a database configure their own in-memory SQLite in `TypeOrmModule.forRoot`. `ormConfigTest.ts` is no longer used: `passengers.e2e.spec.ts` only imports it in commented-out code. `Flight` has relations to `Airline` and `Order`, so specs that load `Flight` must register those entities too.
+- SQLite can't run `FlightsUpsertService.create` or `FlightsReserveService`. Both lock rows with `pessimistic_write`, and `create` also uses a Postgres `::int` cast, so tests that really create a flight or reserve a seat need Postgres.
 
 ## Architecture
 
@@ -79,8 +83,9 @@ Because development relies on `synchronize`, a schema change works locally witho
 
 **Value objects are stored as JSON columns:**
 
+- `Flight.code` is unique through the `UQ_flight_code` index. `FlightsUpsertService.create` locks the airline row and takes the highest correlative for the prefix plus one, and a clash with the index returns 409 Conflict.
 - `Flight.seats` is a JSON array of `AirplaneSeat`, generated from `Airplane.seatsConfig` by `Flight.setSeats()`. A reservation sets `passengerId` on a seat in that array and also adds to the `flight_passengers` relation, so the two must stay in sync.
-- `Airline.luggageRules` and `flightClassPriceIncrements` use custom transformers in `src/airlines/transformers/` to rebuild class instances. Other JSON columns, such as `Flight.code` and `Order.luggage`, come back from the database as plain objects with no methods.
+- `Airline.luggageRules` and `flightClassPriceIncrements` use custom transformers in `src/airlines/transformers/` to rebuild class instances. `Flight.code` does the same with `flightCodeTransformer` in `src/flights/transformers/`, which stores a plain object rather than a JSON string. Other JSON columns, such as `Flight.seats` and `Order.luggage`, come back from the database as plain objects with no methods.
 
 **Order pricing** (`Order.calculateTotal`) combines three parts into `grandTotal`:
 
@@ -103,7 +108,6 @@ These parts are incomplete, so check before assuming they work:
 - `order.paid` has a subscriber class but nothing emits it, and `AddMilesToUserOnOrderPaid` is not registered in `PassengersModule`.
 - `flight.cancelled` is emitted, but its mail subscriber is not registered in `PassengersModule` and its `@OnEvent` listens to `flight.reserved`.
 - `OrderCancelService.cancel` and `OrderUpsertService.update` are TODO stubs. `order.suspend.service.ts` is a copy of the cancel service, and `SuspendedOrder` is not registered in `ormConfig.ts`.
-- `FlightsReserveService` locks the flight row (`pessimistic_write`), which SQLite doesn't support, so tests that really reserve a seat need Postgres.
 - Cancelling a seat leaves the passenger in `flight_passengers`.
 - The airline transformers return JSON strings for `json` columns, so values are stored double-encoded as a JSON string and can't be queried with Postgres JSON operators.
 - Many services throw plain `Error` for not-found cases, which surfaces as HTTP 500 rather than 404.
