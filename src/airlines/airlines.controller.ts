@@ -8,13 +8,9 @@ import {
   ParseUUIDPipe,
   Post,
   UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBody,
   ApiConflictResponse,
-  ApiConsumes,
   ApiNoContentResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
@@ -22,9 +18,8 @@ import { Airline } from './entities/airline.entity';
 import { AirlinesService } from './airlines.service';
 import { AirlinesImportService } from './airlines.import.service';
 import { AirlineDto } from './dto/airline.dto';
-import { ImportAirlinesResultDto } from './dto/import.airlines.result.dto';
-
-const MAX_IMPORT_FILE_BYTES = 1024 * 1024;
+import { ImportResultDto } from '../shared/import/import.result.dto';
+import { SpreadsheetUpload } from '../shared/import/spreadsheet.upload.decorator';
 
 @Controller('airlines')
 export class AirlinesController {
@@ -51,21 +46,10 @@ export class AirlinesController {
   }
 
   @Post('import')
-  @HttpCode(201)
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['file'],
-      properties: { file: { type: 'string', format: 'binary' } },
-    },
-  })
-  @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: MAX_IMPORT_FILE_BYTES } }),
-  )
+  @SpreadsheetUpload()
   async importAirlines(
     @UploadedFile() file?: Express.Multer.File,
-  ): Promise<ImportAirlinesResultDto> {
+  ): Promise<ImportResultDto> {
     return await this.airlinesImportService.importFromFile(file);
   }
 
