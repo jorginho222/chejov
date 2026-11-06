@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class ImportAirlinesResultDto {
+export class ImportResultDto {
   @ApiProperty({
     example: 20,
-    description: 'Cantidad de aerolíneas importadas',
+    description: 'Cantidad de registros importados',
   })
   imported: number;
 }
